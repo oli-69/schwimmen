@@ -1,0 +1,122 @@
+<html>
+    <head>
+        <title>Schwimmen Online</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0"> 
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
+        <meta name="apple-mobile-web-app-title" content="Schwimmen">
+
+        <link rel="apple-touch-icon" sizes="57x57" href="/ico/apple-icon-57x57.png">
+        <link rel="apple-touch-icon" sizes="60x60" href="/ico/apple-icon-60x60.png">
+        <link rel="apple-touch-icon" sizes="72x72" href="/ico/apple-icon-72x72.png">
+        <link rel="apple-touch-icon" sizes="76x76" href="/ico/apple-icon-76x76.png">
+        <link rel="apple-touch-icon" sizes="114x114" href="/ico/apple-icon-114x114.png">
+        <link rel="apple-touch-icon" sizes="120x120" href="/ico/apple-icon-120x120.png">
+        <link rel="apple-touch-icon" sizes="144x144" href="/ico/apple-icon-144x144.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="/ico/apple-icon-152x152.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/ico/apple-icon-180x180.png">
+        <link rel="icon" type="image/png" sizes="192x192"  href="/ico/android-icon-192x192.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/ico/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="96x96" href="/ico/favicon-96x96.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/ico/favicon-16x16.png">
+        <link rel="manifest" href="/ico/manifest.json">
+        <meta name="msapplication-TileColor" content="#ffffff">
+        <meta name="msapplication-TileImage" content="/ico/ms-icon-144x144.png">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="stylesheet" type="text/css" href="ui.css"/>
+        <script src="jquery-3.5.1.js"></script>
+        <script src="audio.js"></script>
+        <script src="cards-png.js"></script>
+        <script src="game.js"></script>
+        <script src="schwimmen.js"></script>
+    </head>
+    <body>
+        <main>
+            <div id="gamePage">
+                <div id="attendeesPanel"></div>
+                <div id="gameDesk"><div id="gameStack" class="cardStack"></div></div>
+                <div id="playerListPanel"></div>
+                <div id="controlPanel">
+                    <span id="controlPanelMessage"></span><br>
+                    <input type="button" id="swapCardBtn" value="Tausche" onclick="swapCard()"  disabled /> 
+                    <input type="button" id="swapAllCardsBtn" value="Alle tauschen" onclick="swapAllCards()"  disabled /> 
+                    <input type="button" id="passBtn" value="Schieben" onclick="pass()"  disabled /> 
+                    <input type="button" id="knockBtn" value="Klopfen" onclick="knock()"  disabled /> 
+                    <input type="button" id="newCardsBtn" value="Neue Karten" onclick="getNewCards()"  disabled /> 
+                    <input type="button" id="logoffBtn" value="Logout" onclick="logoff()" disabled hidden /><br>
+                    <div id="chatContainer">
+                        <div id="chatContainerLeft">
+                            <textarea id="chatArea" readonly></textarea>                
+                            <input type="text" id="chatMessage" />
+                        </div>
+                        <div id="chatContainerRight">
+                            <div id="webradio"><input type="range" id="webRadioSlider" onchange="radioVolumeChanged()" value="25"><div id="webRadioBtn" onClick="toogleWebRadio()"></div></div>
+                            <input type="button" id="chatBtn" value="Send" onclick="sendChatMessage()" />
+                        </div>
+                    </div>
+                </div>
+                <div id="joinInOutDialog">
+                    <div>Neues Spiel. Warte auf Mitspieler...</div><br>
+                    <input type="button" class="dialogButton" id="addToAttendeesBtn" value="Mitspielen" onclick="addToAttendees()" />
+                    <input type="button" class="dialogButton" id="removeFromAttendeesBtn" value="Nicht Mitspielen" onclick="removeFromAttendees()" />
+                    <input type="button" class="dialogButton" id="startGameBtn" value="Los gehts!" onclick="startGame()" />
+                </div>
+                <div id="dealCardsDialog">
+                    <div>Karten werden gemischt...</div><br>
+                    <input type="button" class="dialogButton" id="startDealingBtn" value="Starte ausgeben!" onclick="startDealing()" />
+                </div>
+                <div id="selectDealerStackDialog">
+                    <input type="button" class="dialogButton" id="keepStackBtn" value="Stapel behalten" onclick="keepDealerStack()" /> 
+                    <input type="button" class="dialogButton" id="changeStackBtn" value="Anderen Stapel nehmen" onclick="changeDealerStack()" /> 
+                </div>
+                <div id="dealerStackSelectedDialog">
+                    <div id="stackSelectMessage"></div>
+                </div>
+                <div id="knockDialog">
+                    <div id="knockMessage"></div>
+                </div>
+                <div id="passDialog">
+                    <div id="passMessage"></div>
+                </div>
+                <div id="discoverDialog">
+                    <div id="discoverMessage"></div><br>
+                    <input type="button" class="dialogButton" id="nextRoundBtn" value="Weiter" onclick="nextRound()" /> 
+                </div>
+            </div>
+
+            <div id="loginPage">
+                <div id="loginDialog">
+                    <img src="title.png">
+                    <table>
+                        <tr> 
+                            <td>Name:</td><td><input type="text" id="pName" value=""/></td>
+                        </tr>
+                        <tr> 
+                            <td>Password:</td><td><input type="password" id="pPwd" value=""/></td>
+                        </tr>
+                        <tr> 
+                            <td></td><td><input type="button" id="connectBtn" value="Anmelden" onclick="login()" disabled /></td>
+                        </tr>
+                        <tr> 
+                            <td colspan="2" id="loginConsole">&nbsp;</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </main>
+        <script>
+            $(document).ready(function () {
+                onDocumentReady();
+//                if (!true) {
+//                    setLoginPageVisible(false);
+//                    myName = "Player 1";
+//                    attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}, {name: "Player 5"}];
+//                    attendees = [{name: "Player 1"}, {name: "Player 2"}, {name: "Player 3"}, {name: "Player 4"}];
+//                    updateAttendeeList();
+//                }
+            });
+        </script>
+    </body>
+</html>

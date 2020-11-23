@@ -1,0 +1,423 @@
+
+/* Mobile first  */  
+body{
+    font-family: arial, helvetica, sans-serif;
+    font-size: 0.8em;
+}
+
+main {
+}
+
+#controlPanel{
+    text-align: center;
+    background-color: rgba(0,0,0,0.4);
+    min-width: 100%;
+    left: 0px;
+    bottom:0px;
+    position: fixed;
+    padding: 0.2em;
+}
+
+#controlPanelMessage{    
+    font-size: 1.3em;
+    color: white;
+}
+
+#swapCardBtn, #swapAllCardsBtn, #passBtn, #knockBtn, #newCardsBtn, #logoffBtn, #chatBtn{
+    padding: 0px;
+    font-size: 0.8em;
+}
+#chatContainer{
+    display: flex;
+    flex-direction: row;
+    width:100%;
+    margin-top: 0.25em;
+}
+#chatContainerLeft{
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+#chatContainerRight{
+    display: flex;
+    flex-direction: column;
+    flex-grow: 0;
+    margin-right: 1em;        
+}
+
+#chatArea{
+    font-family: arial, helvetica, sans-serif;
+    font-size: 0.8em;
+    right:1em;
+    height: 3em;
+    border-radius: 5px;
+    border-color: darkgray;
+    background-color: black;
+    color: white;
+    margin: 0.5em;
+}
+#chatMessage {
+    border-radius: 5px;
+    border-color: darkgray;
+    margin-top: 0;
+    margin-right: 0.5em;
+    margin-left: 0.5em;
+    flex-grow: 1;
+}
+
+#webradio{
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    flex-grow: 1;
+    background-color: rgba(224, 224, 224, 0.2);
+    border-radius: 15px;
+    margin: 0.4em;
+}
+
+#webRadioSlider{
+    width: 6em;
+    opacity: 0.7;
+}
+
+#webRadioBtn{
+    width: 24px;
+    min-height:24px;
+    background-image: url('wr-start-24.png');
+    background-position-y: center;
+    background-repeat: no-repeat;
+    margin-right: 0.25em;
+    margin-left: 0.5em;
+    opacity: 0.7;
+}
+#webRadioBtn:hover, #webRadioSlider:hover{
+    opacity: 1;
+}
+#webRadioBtn:active{
+    opacity: 0.5;    
+}
+#attendeesPanel{
+    position: fixed;
+    background-image: url('./wood-small.jpg');
+    background-color: #27221f;
+    background-size: cover;
+    min-width: 100%;
+    min-height: 100%;
+    top: 0px;
+    left: 0px;
+}
+
+#gameDesk{
+    position: absolute;
+    background-color: rgba(255,255,0,0.10);
+    border-radius:  0.5em;
+    padding: 0.5em;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    width:11em;
+}
+
+.attendeeDesk, .moverDesk{
+    position: absolute;
+    color: white;
+    font-weight: bold;
+    background-color: rgba(255,255,0,0.10);
+    border-radius:  0.5em;
+    padding: 0.25em;
+    display: flex;
+    flex-direction: column;
+    width:11em;
+    border-color: rgba(0,0,0,0);
+    border-width: 1px;
+    border-style: solid;
+}
+.moverDesk{
+    background-color: rgba(255,255,0,0.15);
+    border-color: rgba(255,255,0,0.75);
+}
+
+.attendeeNameContainer {
+    bottom:0px;
+    width: 100%;
+    flex-grow: 0;
+    display: flex;
+    flex-direction: row;
+}
+.attendeeName{
+    text-align: center;
+    flex-grow: 1;
+}
+.tokenImage3, .tokenImage2, .tokenImage1, .tokenImage0, .tokenImage-1{
+    background-size: cover;
+    margin-right: 0.2em;
+    width: 29px;
+    height: 16px;
+    flex-grow: 0;
+}
+.tokenImage3{
+    background-image: url("./50x3small.png");
+}
+.tokenImage2{
+    background-image: url("./50x2small.png");
+}
+.tokenImage1{
+    background-image: url("./50x1small.png");
+}
+.tokenImage0{
+    background-image: url("./50x0small.png");
+}
+.tokenImage-1{
+    background-image: url("./50x-1small.png");
+}
+
+.cardStack {
+    width:100%;
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    min-height: 5.06em;
+}
+
+/* ratio: 1,446428571428571*/
+.card {
+    width: 3.5em;
+    height: 5.06em;
+}
+.cardWrapper {
+    min-width: 3.5em;
+    min-height: 5.06em;
+    margin: 0.1em;
+}
+#playerListPanel{
+    display: flex;
+    justify-content: center;
+    background-color: rgba(0,0,0,0.4);
+    min-width: 100%;
+    top: 0px;
+    left: 0px;
+    position: fixed;
+}
+
+.playerOffline {
+    color: darkgray;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+    margin-top: 0.1em;
+    margin-bottom: 0.1em;
+    text-align: center;
+}
+
+.playerOnline {
+    color: white;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+    margin-top: 0.1em;
+    margin-bottom: 0.1em;
+    text-align: center;
+}
+
+#joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, #dealerStackSelectedDialog{
+    text-align: center;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
+    border-color: darkgray;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+    display: block;
+    position: fixed;
+    min-width: 50%;
+    top: 11em;
+    left: 50%;
+    transform: translate(-50%, 0);
+    padding: 1em;
+}
+
+#knockDialog, #passDialog, #dealerStackSelectedDialog{
+    background-color: black;
+    border-color: white;
+    top: 14em;
+}
+
+.dialogButton{
+    margin-top: 0.5em;
+}
+
+#gamePage{
+    display: block;
+}
+
+#loginPage{
+    display: flex;
+    position: fixed;
+    min-height: 100%; 
+    min-width: 100%; 
+    top:0;
+    left:0;
+    background-color: white;
+}
+
+#loginDialog{
+    display: block;
+    text-align: center;
+    background-color: lightgray;
+    border-radius: 5px;
+    border-color: black;
+    border-style: solid;
+    border-width: 1px;
+    height: auto;
+    min-height: 0px;
+    margin: auto;
+    margin-top: 100px;
+    padding: 1em;
+}
+
+#loginDialog input{
+    font-size: 1em;
+}
+
+#loginConsole {
+    font-size: 0.6em;
+    text-align: center;
+}
+
+/* Smart Phones und Tablets mit mittlerer Auflösung */
+@media all and (min-width: 45em) {
+    body {
+        font-size: 0.9em;
+    }
+    #playerListPanel, #controlPanel{
+        background-color: rgba(0,0,0,0.5);
+    }
+    #attendeesPanel{
+        background-image: url('./wood-med.jpg');
+    }
+    #swapCardBtn, #swapAllCardsBtn, #passBtn, #knockBtn, #newCardsBtn, #logoffBtn, #chatBtn{
+        margin-top: 0.3em;
+        padding: 0.15em;
+    }
+    #chatContainerRight{
+        margin-bottom: 0em;        
+    }
+    .cardStack {
+        min-height: 7.23em;
+    }
+    .card {
+        width: 5em;
+        height: 7.23em;
+    }
+    .cardWrapper {
+        min-width: 5em;
+        min-height: 7.23em;
+    }
+    #gameDesk{
+        top: 42%;
+        transform: translate(-50%, -50%);
+        width:15.5em;
+    }
+
+    .attendeeDesk, .moverDesk{
+        width:15.5em;
+    }
+    .tokenImage3, .tokenImage2, .tokenImage1, .tokenImage0, .tokenImage-1{
+        width: 58px;
+        height: 32px;
+    }
+    .tokenImage3{
+        background-image: url("./50x3med.png");
+    }
+    .tokenImage2{
+        background-image: url("./50x2med.png");
+    }
+    .tokenImage1{
+        background-image: url("./50x1med.png");
+    }
+    .tokenImage0{
+        background-image: url("./50x0med.png");
+    }
+    .tokenImage-1{
+        background-image: url("./50x-1med.png");
+    }
+    .attendeeName{
+        margin-top: 0.5em;
+    }
+    #controlPanelMessage{    
+        margin-bottom: 3em;
+    }
+    #chatArea{
+        font-size: 0.9em;
+        height: 5em;
+    }
+    #controlPanel{
+        padding: 0.4em;
+    }
+    #joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, #dealerStackSelectedDialog{
+        background-color: rgba(0,0,0,0.75);
+        font-size: 1.3em;
+    }
+}
+
+/* Viewports mit großer Auflösung */
+@media all and (min-width: 80em) {
+    body {
+        font-size: 1em;
+    }
+
+    #swapCardBtn, #swapAllCardsBtn, #passBtn, #knockBtn, #newCardsBtn, #logoffBtn, #chatBtn{
+        margin-top: 0.5em;
+        padding: 0.3em;
+    }
+
+    .cardStack {
+        min-height: 8.67em;
+    }
+    .card {
+        width: 6em;
+        height: 8.67em;
+    }
+    .cardWrapper {
+        min-width: 6em;
+        min-height: 8.67em;
+    }
+    #gameDesk{
+        top: 42%;
+        transform: translate(-50%, -50%);
+        width:18.6em;
+    }
+
+    .attendeeDesk, .moverDesk{
+        width:18.6em;
+    }
+    .tokenImage3, .tokenImage2, .tokenImage1, .tokenImage0, .tokenImage-1{
+        width: 88px;
+        height: 48px;
+    }
+    .tokenImage3{
+        background-image: url("./50x3big.png");
+    }
+    .tokenImage2{
+        background-image: url("./50x2big.png");
+    }
+    .tokenImage1{
+        background-image: url("./50x1big.png");
+    }
+    .tokenImage0{
+        background-image: url("./50x0big.png");
+    }
+    .tokenImage-1{
+        background-image: url("./50x-1big.png");
+    }
+    .attendeeName{
+        margin-top: 1em;
+    }
+    #controlPanel{
+        padding: 0.6em;
+    }
+    #joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, #dealerStackSelectedDialog{
+        font-size: 1.6em;
+    }
+
+}
