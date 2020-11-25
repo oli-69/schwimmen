@@ -2,7 +2,26 @@ var webSocket;
 var isOnline = false;
 var fadePanelSpeed = 500;
 var messageBuffer = [];
+var videoWindow;
 
+$(document).ready(function () {
+    $("#loginOptionsSwitch").change(onLoginOptionsSwitchChange);
+    $("#loginOptionsSwitch").prop("checked", false);
+    onLoginOptionsSwitchChange();
+});
+function onLoginOptionsSwitchChange() {
+    var selected = $(loginOptionsSwitch).is(":checked");
+    $("#loginImageGame").attr("src", (selected ? "login-game-bw.png" : "login-game.png"));
+    $("#loginImageVideo").attr("src", (selected ? "login-video.png" : "login-video-bw.png"));
+    $("#loginOptionGame").css("opacity", (selected ? 0.3 : 1.0));
+    $("#loginOptionVideo").css("opacity", (selected ? 1.0 : 0.3));
+}
+
+function openVideo() {
+    if (videoWindow === undefined || videoWindow.closed) {
+        videoWindow = window.open("video.html?name=" + myName);
+    }
+}
 
 function logoff() {
     if (webSocket.readyState === WebSocket.OPEN) {
@@ -59,12 +78,20 @@ function login() {
 
 function onLoginSuccess() {
     $("#loginConsole").text("Anmeldung erfolgreich");
-    setLoginPageVisible(false);
-    isOnline = true;
+
+    if ($(loginOptionsSwitch).is(":checked")) {
+        // open video room
+        closeSocket();
+        window.location = "video.html?name=" + myName;
+    } else {
+        // start gaming
+        setLoginPageVisible(false);
+        isOnline = true;
+    }
 }
 
 function setLoginPageVisible(visible) {
-    $("#loginConsole").text("");
+    $("#loginConsole").text("").append("&nbsp;");
     if (visible) {
         $("#loginPage").show(fadePanelSpeed);
         setWebRadioPlaying(false);

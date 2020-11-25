@@ -26,6 +26,7 @@
         <meta name="theme-color" content="#ffffff">
 
         <link rel="stylesheet" type="text/css" href="ui.css"/>
+        <link rel="stylesheet" type="text/css" href="ui-login.css"/>
         <script src="jquery-3.5.1.js"></script>
         <script src="audio.js"></script>
         <script src="cards-png.js"></script>
@@ -53,6 +54,7 @@
                         </div>
                         <div id="chatContainerRight">
                             <div id="webradio"><input type="range" id="webRadioSlider" onchange="radioVolumeChanged()" value="25"><div id="webRadioBtn" onClick="toogleWebRadio()"></div></div>
+                            <input type="button" id="videoBtn" value="Video" onclick="openVideo()" />
                             <input type="button" id="chatBtn" value="Send" onclick="sendChatMessage()" />
                         </div>
                     </div>
@@ -101,6 +103,18 @@
                         </tr>
                         <tr> 
                             <td colspan="2" id="loginConsole">&nbsp;</td>
+                        </tr>
+                        <tr> 
+                            <td colspan="2">
+                                <div id="loginOptionsArea">
+                                    <div id="loginOptionGame" class="loginOption"><img id="loginImageGame" src="login-game.png"><br>Spiel</div>
+                                    <label class="loginSwitch">
+                                        <input type="checkbox" id="loginOptionsSwitch">
+                                        <span class="loginSlider round"></span>
+                                    </label>
+                                    <div id="loginOptionVideo" class="loginOption"><img id="loginImageVideo" src="login-video-bw.png"><br>Videoraum</div>
+                                </div>
+                            </td>
                         </tr>
                     </table>
                 </div>

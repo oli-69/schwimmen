@@ -10,6 +10,7 @@ and open the template in the editor.
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="jquery-3.5.1.js"></script>
+        <script src='https://meet.jit.si/external_api.js'></script>
         <script src="cards-png.js"></script>
         <style>
             #desk {
@@ -22,12 +23,16 @@ and open the template in the editor.
         </style>
     </head>
     <body>
+        <div id="videoArea">
+            VIDEO
+        </div>
+        <br>
         Lorem Ipsunnlansfnds .sdafasd.. .a........
         <br>
         <div style="display: flex;">
             <div id="desk"></div>
         </div>
-
+        <input type= "button" onClick="test()">
         <script>
             function log(msg) {
                 console.log(msg);
@@ -36,25 +41,44 @@ and open the template in the editor.
                 var card = getUICard(CARO, ACHT);
                 var card2 = getUICard(PIK, NEUN);
                 $("#desk").append(card.ui)
-//                $("#desk").append(card2.ui);
                 $("#desk").click(function () {
                     log("clicked: " + card2String(card.color, card.value));
-                    
                     card.setSelected(true);
-//                    var cardElement = card.ui; // $("#" + getSvgName(card.color, card.value));
-//                    cardElement.css({ position: "absolute"});
-//                    card.ui.animate({
-//                        top: "+=50",
-//                    }, 3000, function () {
-//                        log("Anmiation complete");
-//                    });
-//                    card.img.animate({
-//                        opacity: 0.75,
-//                    }, 3000, function () {
-//                        log("Anmiation complete");
-//                    });
                 })
             });
+            var options = {
+                roomName: 'schwimmen-online',
+                width: "100%",
+                height: "8em",
+                parentNode: document.querySelector('#videoArea'),
+//                userInfo: {
+//                    displayName: 'John Doe'
+//                },
+                configOverwrite: {
+                    defaultLanguage: 'de',
+                    minParticipants: 1,
+                    disableInviteFunctions: true,
+                    prejoinPageEnabled: false
+                },
+                interfaceConfigOverwrite: {
+                    filmStripOnly: true,
+                    MOBILE_APP_PROMO: false,
+                    HIDE_INVITE_MORE_HEADER: true,
+                    VERTICAL_FILMSTRIP: false,
+                    FILM_STRIP_MAX_HEIGHT: "12em"
+                }
+            };
+            var jitsiApi = new JitsiMeetExternalAPI('meet.jit.si', options);
+//          videoConferenceJoined
+//          videoConferenceLeft
+            $(document).ready(function () {
+                window.addEventListener('unload', function (event) {
+                    jitsiApi.dispose();
+                });
+            });
+            function test() {
+                jitsiApi.dispose();
+            }
         </script>
     </body>
 </html>
