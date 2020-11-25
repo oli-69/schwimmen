@@ -202,7 +202,7 @@ function playCoinSound(numCoin, numPlayed) {
             }, time);
         };
         if (numPlayed === 0) {
-            setTimeout(delayed, 1000);
+            setTimeout(delayed, 0);
         } else {
             delayed();
         }
@@ -213,6 +213,9 @@ function onDiscover(gamePhaseMessage) {
     updateAttendeeStacks(gamePhaseMessage);
     updateDiscoverMessageBox(gamePhaseMessage);
     $("#nextRoundBtn").prop("disabled", true);
+    setGameDialogVisible($("#dealerStackSelectedDialog"), false);
+    setGameDialogVisible($("#knockDialog"), false);
+    setGameDialogVisible($("#passDialog"), false);
     onGamePhase(gamePhase);
     if (gamePhaseMessage.discoverMessage.finishKnocker !== undefined) {
         sound.knock2.play();
@@ -235,7 +238,7 @@ function onDiscover(gamePhaseMessage) {
             } else if (gamePhaseMessage.discoverMessage.remainingAttendeesCount < 2) {
                 setTimeout(function () {
                     sound.finishSound[gamePhaseMessage.discoverMessage.finishSoundId].play();
-                }, 1500);
+                }, 1000);
             }
             gamePhaseMessage.discoverMessage.payers.forEach(function (payer) {
                 attendees[getAttendeeIdByName(payer)].gameTokens--;
