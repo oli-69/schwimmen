@@ -139,15 +139,16 @@ public class SchwimmenSocket {
         byte[] pwd = jsonObj.get("pwd").getAsString().getBytes();
         if (validateLoginData(name, pwd)) {
             SchwimmenPlayer player = game.getPlayer(name);
+            String successMessage = gson.toJson(new LoginSuccess(game.getVideoRoomName()));
             if (player == null) {
                 player = new SchwimmenPlayer(name, this);
                 game.addPlayerToRoom(player);
                 sendString(gson.toJson(game.getGameState(player)));
-                sendString(gson.toJson(new LoginSuccess()));
+                sendString(successMessage);
             } else {
                 closeSession(player.getSocket().session);
                 player.setSocket(this);
-                sendString(gson.toJson(new LoginSuccess()));
+                sendString(successMessage);
             }
         }
         LOGGER.info("LOGIN " + name);

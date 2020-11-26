@@ -56,6 +56,7 @@ public class SchwimmenGame extends CardGame {
     private final Gson gson;
     private final Round round;
     private final List<Integer> finishSoundIds;
+    private final String videoRoomName;
 
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
     private SchwimmenPlayer gameLooser = null;
@@ -82,6 +83,7 @@ public class SchwimmenGame extends CardGame {
         gson = new Gson();
         finishSoundIds = new ArrayList<>();
         initFinishSoundIds();
+        videoRoomName = "Schwimmen-Online"; // + (System.currentTimeMillis() / 1000);
         super.addPropertyChangeListener(new GameChangeListener(this));
     }
 
@@ -121,6 +123,10 @@ public class SchwimmenGame extends CardGame {
         String msg = "Spieler " + player.getName() + " ist gegangen";
         chat(msg);
         LOGGER.info(msg);
+    }
+
+    public String getVideoRoomName() {
+        return videoRoomName;
     }
 
     public boolean isAttendee(SchwimmenPlayer player) {

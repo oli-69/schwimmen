@@ -650,7 +650,7 @@ public class SchwimmenGameTest {
 
     private void login(SchwimmenPlayer player) {
         game.addPlayerToRoom(player);
-        player.getSocket().sendString(gson.toJson(new LoginSuccess()));
+        player.getSocket().sendString(gson.toJson(new LoginSuccess("roomName")));
         player.getSocket().sendString(gson.toJson(game.getGameState(player)));
     }
 

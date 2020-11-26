@@ -3,6 +3,7 @@ var isOnline = false;
 var fadePanelSpeed = 500;
 var messageBuffer = [];
 var videoWindow;
+var videoRoomName = "";
 
 $(document).ready(function () {
     $("#loginOptionsSwitch").change(onLoginOptionsSwitchChange);
@@ -17,10 +18,19 @@ function onLoginOptionsSwitchChange() {
     $("#loginOptionVideo").css("opacity", (selected ? 1.0 : 0.3));
 }
 
+function selectLoginOptionsSwitch(checked) {
+    $("#loginOptionsSwitch").prop("checked", checked);
+    onLoginOptionsSwitchChange();
+}
+
 function openVideo() {
     if (videoWindow === undefined || videoWindow.closed) {
-        videoWindow = window.open("video.html?name=" + myName);
+        videoWindow = window.open(getVideoUrl());
     }
+}
+
+function getVideoUrl() {
+    return "video.html?name=" + myName + "&room=" + videoRoomName;
 }
 
 function logoff() {
@@ -76,13 +86,13 @@ function login() {
     setTimeout(logf, 0);
 }
 
-function onLoginSuccess() {
+function onLoginSuccess(message) {
     $("#loginConsole").text("Anmeldung erfolgreich");
-
+    videoRoomName = message.videoRoomName;
     if ($(loginOptionsSwitch).is(":checked")) {
         // open video room
-        closeSocket();
-        window.location = "video.html?name=" + myName;
+        closeSocket();       
+        window.location = getVideoUrl();
     } else {
         // start gaming
         setLoginPageVisible(false);
@@ -129,7 +139,7 @@ function onServerMessage(data) {
             setWebRadioPlaying(message.play);
             break;
         case "loginSuccess":
-            onLoginSuccess();
+            onLoginSuccess(message);
             break;
         case "playerList":
             messageBuffer.push(function () {
