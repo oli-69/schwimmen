@@ -24,13 +24,13 @@ function selectLoginOptionsSwitch(checked) {
 }
 
 function openVideo() {
-    if (videoWindow === undefined || videoWindow.closed) {
-        videoWindow = window.open(getVideoUrl());
+    if (videoWindow === undefined || videoWindow.closed === true ) {
+        videoWindow = window.open(getVideoUrl(), "Video", menubar=0, width = 320, height = 320);
     }
 }
 
 function getVideoUrl() {
-    return "video.html?name=" + myName + "&room=" + videoRoomName;
+    return "https://meet.jit.si/" + videoRoomName + "#userInfo.displayName=\"" + myName + "\"&interfaceConfigOverwrite.MOBILE_APP_PROMO=true";
 }
 
 function logoff() {
@@ -91,7 +91,7 @@ function onLoginSuccess(message) {
     videoRoomName = message.videoRoomName;
     if ($(loginOptionsSwitch).is(":checked")) {
         // open video room
-        closeSocket();       
+        closeSocket();
         window.location = getVideoUrl();
     } else {
         // start gaming
