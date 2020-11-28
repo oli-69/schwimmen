@@ -24,13 +24,14 @@ function selectLoginOptionsSwitch(checked) {
 }
 
 function openVideo() {
-    if (videoWindow === undefined || videoWindow.closed === true ) {
-        videoWindow = window.open(getVideoUrl(), "Video", menubar=0, width = 320, height = 320);
+    if (videoWindow === undefined || videoWindow.closed === true) {
+        videoWindow = window.open(getVideoUrl(), "Video", width = 320, height = 320);
     }
 }
 
 function getVideoUrl() {
-    return "https://meet.jit.si/" + videoRoomName + "#userInfo.displayName=\"" + myName + "\"&interfaceConfigOverwrite.MOBILE_APP_PROMO=true";
+    var params = "userInfo.displayName=\"" + myName + "\"&config.prejoinPageEnabled=false";
+    return "https://meet.jit.si/" + videoRoomName + "#" + params;
 }
 
 function logoff() {
