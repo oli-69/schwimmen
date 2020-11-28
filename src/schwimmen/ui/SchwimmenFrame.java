@@ -11,12 +11,12 @@ import org.apache.logging.log4j.Logger;
 import schwimmen.SchwimmenGame;
 
 /**
- *
- * @author Oliver Faulhaber
+ * Implementation of the server side user interface. Created with NetBeans GUI Editor.
  */
 public class SchwimmenFrame extends javax.swing.JFrame {
 
     private static final Logger LOGGER = LogManager.getLogger(SchwimmenFrame.class);
+    private static final long serialVersionUID = 1L;
     private final SchwimmenGame game;
 
     /**

@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package schwimmen;
 
 import com.google.gson.Gson;
@@ -16,13 +11,21 @@ import schwimmen.messages.PlayerList;
 import schwimmen.messages.PlayerOnline;
 
 /**
- *
+ * This class is a listener to class Game. It listens to change events and
+ * synchronizes the clients by sending appropriate messages. This part of code
+ * was placed here just to take some code out from the game class. (even this
+ * isn't a good design).
  */
 public class GameChangeListener implements PropertyChangeListener {
 
     private final SchwimmenGame game;
     private final Gson gson;
 
+    /**
+     * Constructor. Creates an instance of this class.
+     *
+     * @param source the game source to which it belongs.
+     */
     public GameChangeListener(SchwimmenGame source) {
         game = source;
         gson = new Gson();

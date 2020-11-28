@@ -27,6 +27,9 @@ import schwimmen.messages.DiscoverStack;
 import schwimmen.messages.GamePhase;
 import schwimmen.messages.LoginSuccess;
 
+/**
+ * Tests for class SchwimmenGame
+ */
 public class SchwimmenGameTest {
 
     static {

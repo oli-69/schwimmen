@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package schwimmen;
 
 import cardgame.Card;
@@ -26,18 +21,76 @@ import schwimmen.messages.PlayerStack;
 import schwimmen.messages.StackSwap;
 
 /**
- *
+ * This class implements the game rules and evaluates the player's decisions.
  */
 public class SchwimmenGame extends CardGame {
 
     private static final Logger LOGGER = LogManager.getLogger(SchwimmenGame.class);
 
+    /**
+     * Enumeration of the game phases.
+     */
     public static enum GAMEPHASE {
-        waitForAttendees, shuffle, dealCards, waitForPlayerMove, moveResult, discover
+        /**
+         * The game didn's start yet. Player's can choose to attend the next
+         * round, or not.
+         */
+        waitForAttendees,
+        /**
+         * The card dealer is shuffling. The player ends this phase by starting
+         * to deal cards.
+         */
+        shuffle,
+        /**
+         * The card dealer has to select which stack is hold and which goes into
+         * the stock in the middle.
+         */
+        dealCards,
+        /**
+         * Game is waiting for next player move.
+         */
+        waitForPlayerMove,
+        /**
+         * The result of a player move (a player's decision) got caclulated and
+         * distributed to the clients.
+         */
+        moveResult,
+        /**
+         * Ths game round ended. All cards become discoverd.
+         */
+        discover
     };
 
+    /**
+     * Enumeration of the available player moves.
+     */
     public static enum MOVE {
-        selectStack, swapCard, swapAllCards, pass, knock, changeStack
+        /**
+         * Card dealer selects which stack is hold, the other one goes into the
+         * stock in the middle.
+         */
+        selectStack,
+        /**
+         * Player swaps a card (one in, one out).
+         */
+        swapCard,
+        /**
+         * Player swappes all three cards.
+         */
+        swapAllCards,
+        /**
+         * Player passes this round.
+         */
+        pass,
+        /**
+         * Player knocks.
+         */
+        knock,
+        /**
+         * Player changes ths stock cards in the middle. Allowed if all
+         * attendees passed in a row.
+         */
+        changeStack
     };
 
     public static final String PROP_GAMEPHASE = "gameState";
@@ -47,11 +100,11 @@ public class SchwimmenGame extends CardGame {
     public static final String PROP_WEBRADIO_PLAYING = "webradioPlaying";
 
     private final PlayerIdComparator playerIdComparator;
-    private final List<SchwimmenPlayer> players;
-    private final List<SchwimmenPlayer> attendees;
-    private final List<SchwimmenPlayer> gameLeavers;
+    private final List<SchwimmenPlayer> players; // List of all players in the room
+    private final List<SchwimmenPlayer> attendees; // sub-list of players, which are actually in the game.
+    private final List<SchwimmenPlayer> gameLeavers; // sub-list of attendees, which are already out (death)
     private final PropertyChangeListener playerListener;
-    private final List<Card> gameStack;
+    private final List<Card> gameStack; // Stock in the middle of the game, visible to all players.
     private final List<Card> dealerStack; // 2nd stack while dealing cards.
     private final Gson gson;
     private final Round round;
@@ -60,16 +113,24 @@ public class SchwimmenGame extends CardGame {
 
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
     private SchwimmenPlayer gameLooser = null;
-    private SchwimmenPlayer mover = null;
+    private SchwimmenPlayer mover = null; // this is like the cursor or pointer of the player which has to move. 
     private PlayerMove playerMove = null;
     private DiscoverMessage discoverMessage = null;
     private boolean webradioPlaying = true;
     private int finishSoundIdCursor = 0;
 
+    /**
+     * Default Constructor. Creates an instance of this class.
+     */
     public SchwimmenGame() {
         this(Collections.synchronizedList(new ArrayList<>()));
     }
 
+    /**
+     * Package protected constructor. Required for unit testing.
+     *
+     * @param gameStack injected game stack.
+     */
     SchwimmenGame(List<Card> gameStack) {
         super(CARDS_32);
         players = Collections.synchronizedList(new ArrayList<>());
@@ -83,14 +144,25 @@ public class SchwimmenGame extends CardGame {
         gson = new Gson();
         finishSoundIds = new ArrayList<>();
         initFinishSoundIds();
-        videoRoomName = "Schwimmen-Online"; // + (System.currentTimeMillis() / 1000);
+        videoRoomName = "Schwimmen-Online"; // + (System.currentTimeMillis() / 1000); // currently disabled, since Jitsi's iOS-App doesn't take the room name from the url.
         super.addPropertyChangeListener(new GameChangeListener(this));
     }
 
+    /**
+     * Lookup for a player by name.
+     *
+     * @param name the player's name.
+     * @return the player specified by name, null if there isn't one.f
+     */
     public SchwimmenPlayer getPlayer(String name) {
         return players.stream().filter(player -> player.getName().equalsIgnoreCase(name)).findAny().orElse(null);
     }
 
+    /**
+     * The Login function. A player logged in and therefore "entered the room".
+     *
+     * @param player the player causing the event.
+     */
     public void addPlayerToRoom(SchwimmenPlayer player) {
         if (mover == null) {
             mover = player;
@@ -106,6 +178,12 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
+    /**
+     * The logout function. A player logged out and therefore "left the round".
+     * Currently disabled in the clients.
+     *
+     * @param player the player causing the event.
+     */
     public void removePlayerFromRoom(SchwimmenPlayer player) {
         if (gamePhase != GAMEPHASE.waitForAttendees) {
             LOGGER.warn("Spieler kann jetzt nicht abgemeldet werden. Spiel laeuft!");
@@ -125,32 +203,69 @@ public class SchwimmenGame extends CardGame {
         LOGGER.info(msg);
     }
 
+    /**
+     * Getter for property videoRoomName.
+     *
+     * @return the name for the room in Jitsi meet.
+     */
     public String getVideoRoomName() {
         return videoRoomName;
     }
 
+    /**
+     * Lookup for property isAttendee.
+     *
+     * @param player the player for which it is asked for.
+     * @return true if the player is currently attendee of the game, false
+     * otherwise.
+     */
     public boolean isAttendee(SchwimmenPlayer player) {
         return attendees.contains(player);
     }
 
+    /**
+     * Getter for property player list.
+     *
+     * @return the list of players in the room.
+     */
     public List<SchwimmenPlayer> getPlayerList() {
         return Collections.unmodifiableList(players);
     }
 
+    /**
+     * Sends a ping to all clients. Required to prevent the websocket timeout in
+     * case of no action.
+     */
     public void sendPing() {
         sendToPlayers("{\"action\":\"ping\"}");
     }
 
+    /**
+     * Sends a message to all players.
+     *
+     * @param message the message in JSON format.
+     */
     public void sendToPlayers(String message) {
         players.forEach(p -> {
             p.getSocket().sendString(message);
         });
     }
 
+    /**
+     * Sends a chat message to all clients.
+     *
+     * @param text the text to be send to the chat.
+     */
     public void chat(String text) {
         chat(text, null);
     }
 
+    /**
+     * Sends a chat message to all clients.
+     *
+     * @param text the text to be send to the chat.
+     * @param sender the sending player.
+     */
     public void chat(String text, SchwimmenPlayer sender) {
         if (text != null && !text.trim().isEmpty()) {
             ChatMessage chatMessage = new ChatMessage(text, sender);
@@ -158,6 +273,13 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
+    /**
+     * Getter for property game state.
+     *
+     * @param player the player for which it is asked for. Will vary e.g. if the
+     * player is allowed to knock etc.
+     * @return the game state for this player.
+     */
     public GameStateMessage getGameState(SchwimmenPlayer player) {
         List<DiscoverStack> discoverStacks = null;
         if (gamePhase == GAMEPHASE.discover) {
@@ -173,44 +295,87 @@ public class SchwimmenGame extends CardGame {
         return new GameStateMessage(gamePhase.name(), players, attendees, mover, gameStack, player.getStack(), isChangeStackAllowed(player), isKnockAllowed(), discoverStacks, webradioPlaying);
     }
 
+    /**
+     * Getter for property Attendees count.
+     *
+     * @return the number of attendees (still) in the game.
+     */
     public int getAttendeesCount() {
         return attendees.size();
     }
 
+    /**
+     * Getter for property game phase.
+     *
+     * @return the current game phase.
+     */
     public GAMEPHASE getGamePhase() {
         return gamePhase;
     }
 
+    /**
+     * Getter for property mover.
+     *
+     * @return the player which is allowed to select a move. (The game's 'cursor')
+     */
     public SchwimmenPlayer getMover() {
         return mover;
     }
 
+    /**
+     * Getter for current player move.
+     * @return the current player's decision.
+     */
     public PlayerMove getPlayertMove() {
         return playerMove;
     }
 
+    /**
+     * Getter for property discover message.
+     * @return the current discover message (if any).
+     */
     public DiscoverMessage getDiscoverMessage() {
         return discoverMessage;
     }
 
+    /**
+     * Getter for property ChangeStackAllowed.
+     * @param player the player for which it is asked for.
+     * @return true if the player is allowed to change the stock cards (in the middle), false otherwise.
+     */
     public boolean isChangeStackAllowed(SchwimmenPlayer player) {
         return round != null && round.isChangeStackAllowed(player);
     }
 
+    /**
+     * Getter for property knock allowed.
+     * @return true if the player is allowed to knock, false otherwise.
+     */
     public boolean isKnockAllowed() {
         return (round != null) && round.isKnockAllowed();
     }
 
+    /**
+     * Setter for property WebRadioPlaying.
+     * @param play true to turn on the webradio, false to turn off.
+     */
     public void setWebRadioPlaying(boolean play) {
         boolean oldValue = webradioPlaying;
         webradioPlaying = play;
         firePropertyChange(PROP_WEBRADIO_PLAYING, oldValue, play);
     }
 
+    /**
+     * Getter for property WebradioPlaying.
+     * @return true if the webradio is currently playing, false otherwise.
+     */
     public boolean isWebradioPlaying() {
         return webradioPlaying;
     }
 
+    /**
+     * Starts the game.
+     */
     public void startGame() {
         mover = guessNextGameStarter();
         gameLeavers.clear();
@@ -230,10 +395,17 @@ public class SchwimmenGame extends CardGame {
         setGamePhase(GAMEPHASE.shuffle);
     }
 
+    /**
+     * Stops a game. (Serverside only, not part of the game rules)
+     */
     public void stopGame() {
         setGamePhase(GAMEPHASE.waitForAttendees);
     }
 
+    /**
+     * Adds a player to the list of attendees.
+     * @param attendee player to add to the attendees.
+     */
     public void addAttendee(SchwimmenPlayer attendee) {
         if (gamePhase == GAMEPHASE.waitForAttendees) {
             if (!attendees.contains(attendee)) {
@@ -251,6 +423,10 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
+    /**
+     * Removes a player from the list of attendees.
+     * @param attendee the player to remove from the attendees.
+     */
     public void removeAttendee(SchwimmenPlayer attendee) {
         if (gamePhase != GAMEPHASE.waitForAttendees) {
             if (attendees.contains(attendee) && !round.leavers.contains(attendee)) {
@@ -356,7 +532,7 @@ public class SchwimmenGame extends CardGame {
             discover();
         } else {
             if (round.getKnockCount() == 1 && getNextTo(mover).equals(round.knocker1)) {
-                round.knock(round.knocker1); // runde nach klopfen durchgelaufen
+                round.knock(round.knocker1); // round completed after 1th knock
             }
             if (round.getKnockCount() > 1) {
                 discover();
@@ -445,14 +621,14 @@ public class SchwimmenGame extends CardGame {
                     case discover:
                         round.leavers.forEach(leaver -> {
                             if (gameLooser == null) {
-                                gameLooser = leaver; // gibt beim nächsten Spiel zuerst
+                                gameLooser = leaver; // dealer for the next game
                             }
                             gameLeavers.add(leaver);
-                            attendees.remove(leaver); // wer schwimmt & zahlt scheidet aus
+                            attendees.remove(leaver); // swimming & paying -> death
                             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
 
                         });
-                        if (attendees.size() == 1) { // Spielende
+                        if (attendees.size() == 1) { // game over
                             attendees.get(0).addTotalTokens(3 * gameLeavers.size());
                             gameLeavers.forEach(leaver -> {
                                 leaver.removeTotalTokens(3);
@@ -787,11 +963,13 @@ public class SchwimmenGame extends CardGame {
     }
 
     static class PlayerIdComparator implements Comparator<SchwimmenPlayer> {
+
         final List<SchwimmenPlayer> playerList;
 
         public PlayerIdComparator(List<SchwimmenPlayer> playerList) {
             this.playerList = playerList;
         }
+
         @Override
         public int compare(SchwimmenPlayer p1, SchwimmenPlayer p2) {
             return playerList.indexOf(p1) < playerList.indexOf(p2) ? -1 : 1;

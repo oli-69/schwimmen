@@ -20,7 +20,7 @@ import schwimmen.messages.LoginError;
 import schwimmen.messages.LoginSuccess;
 
 /**
- *
+ * This class implements the player's web socket.
  */
 @WebSocket
 public class SchwimmenSocket {

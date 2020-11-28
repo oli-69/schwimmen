@@ -26,8 +26,8 @@ import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
 import schwimmen.ui.SchwimmenFrame;
 
 /**
- *
- * @author Oliver
+ * This class represents the SchwimmenServer. It implements the static main
+ * entry point to start the application.
  */
 public class SchwimmenServer {
 
@@ -38,7 +38,8 @@ public class SchwimmenServer {
     private static final Logger LOGGER = LogManager.getLogger(SchwimmenServer.class);
 
     /**
-     * @param args the command line arguments
+     * Static main entry point.
+     * @param args the command line arguments. Accepts one argument which is an alternate config path. 
      */
     public static void main(String[] args) throws Exception {
         LOGGER.info("Starting http server)");

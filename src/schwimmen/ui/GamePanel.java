@@ -1,8 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package schwimmen.ui;
 
 import java.awt.Component;
@@ -22,12 +18,12 @@ import schwimmen.SchwimmenGame.GAMEPHASE;
 import schwimmen.SchwimmenPlayer;
 
 /**
- *
- * @author Oliver
+ * Implements the main panel for the server side GUI. Created with NetBeans GUI Editor.
  */
 public class GamePanel extends javax.swing.JPanel {
 
     private static final Logger LOGGER = LogManager.getLogger(GamePanel.class);
+    private static final long serialVersionUID = 1L;
 
     DefaultListModel<SchwimmenPlayer> playerListModel;
     SchwimmenGame game;
