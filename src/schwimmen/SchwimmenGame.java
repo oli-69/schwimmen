@@ -72,8 +72,8 @@ public class SchwimmenGame extends CardGame {
 
     SchwimmenGame(List<Card> gameStack) {
         super(CARDS_32);
-        playerIdComparator = new PlayerIdComparator();
         players = Collections.synchronizedList(new ArrayList<>());
+        playerIdComparator = new PlayerIdComparator(players);
         attendees = Collections.synchronizedList(new ArrayList<>());
         gameLeavers = Collections.synchronizedList(new ArrayList<>());
         this.gameStack = gameStack;
@@ -460,6 +460,7 @@ public class SchwimmenGame extends CardGame {
                                     attendees.add(leaver);
                                 }
                             });
+                            attendees.sort(playerIdComparator);
                             mover = guessNextGameStarter();
                             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
                             players.forEach(p -> p.reset());
@@ -785,11 +786,15 @@ public class SchwimmenGame extends CardGame {
         return attendees.get(index < attendees.size() ? index : 0);
     }
 
-    private class PlayerIdComparator implements Comparator<SchwimmenPlayer> {
+    static class PlayerIdComparator implements Comparator<SchwimmenPlayer> {
+        final List<SchwimmenPlayer> playerList;
 
+        public PlayerIdComparator(List<SchwimmenPlayer> playerList) {
+            this.playerList = playerList;
+        }
         @Override
         public int compare(SchwimmenPlayer p1, SchwimmenPlayer p2) {
-            return players.indexOf(p1) < players.indexOf(p2) ? -1 : 1;
+            return playerList.indexOf(p1) < playerList.indexOf(p2) ? -1 : 1;
         }
     }
 

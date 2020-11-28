@@ -70,6 +70,26 @@ public class SchwimmenGameTest {
     }
 
     @Test
+    public void testPlayerComparator() {
+        List <SchwimmenPlayer> playerList = new ArrayList<>();
+        List <SchwimmenPlayer> attendeeList = new ArrayList<>();
+        playerList.add(player1);
+        playerList.add(player2);
+        playerList.add(player3);
+        attendeeList.add(player2);
+        attendeeList.add(player1);
+        attendeeList.add(player3);
+        
+        // when
+        attendeeList.sort(new SchwimmenGame.PlayerIdComparator(playerList));
+        
+        // then
+        assertEquals(player1, attendeeList.get(0));
+        assertEquals(player2, attendeeList.get(1));
+        assertEquals(player3, attendeeList.get(2));
+    }
+
+    @Test
     public void testDiscover() {
         startWith2Players();
         assertEquals(3, player1.getGameTokens());
@@ -120,7 +140,7 @@ public class SchwimmenGameTest {
         socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");
         assertEquals(2, player1.getGameTokens());
         assertEquals(-1, player2.getGameTokens());
-        
+
         // neues Spiel
         socket1.onText("{\"action\": \"nextRound\"}"); // spieler koennen ein/aussteigen
         socket2.onText("{\"action\": \"nextRound\"}"); // shuffle
