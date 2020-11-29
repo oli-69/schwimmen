@@ -57,7 +57,7 @@ public class SchwimmenGameTest {
     @Before
     public void setUp() {
         gameStack = Collections.synchronizedList(new ArrayList<>());
-        game = new SchwimmenGame(gameStack);
+        game = new SchwimmenGame(gameStack, "");
         session1 = Mockito.mock(Session.class);
         session2 = Mockito.mock(Session.class);
         session3 = Mockito.mock(Session.class);

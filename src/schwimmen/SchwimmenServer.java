@@ -43,7 +43,6 @@ public class SchwimmenServer {
      */
     public static void main(String[] args) throws Exception {
         LOGGER.info("Starting http server)");
-        SchwimmenGame game = new SchwimmenGame();
         String configPath = System.getProperty("user.dir");
         if (args.length > 0) {
             // try absolute path
@@ -56,11 +55,15 @@ public class SchwimmenServer {
                 }
             }
         }
-        LOGGER.debug("Using config path: " + configPath);
+        LOGGER.info("Using config path: " + configPath);
         Properties settings = new Properties();
         settings.load(new FileInputStream(configPath + File.separator + "settings.properties"));
         int port = Integer.parseInt(settings.getProperty("serverPort"));
         LOGGER.info("using port " + port);
+        String confName = settings.getProperty("jitsiConference");
+        LOGGER.info("using conference name '" + confName + "'");
+//        confName = confName  + (System.currentTimeMillis() / 1000); // currently disabled, since Jitsi's iOS-App doesn't take the room name from the url.
+        SchwimmenGame game = new SchwimmenGame(confName);
         Server httpServer = new Server(port);
 
         ServletContextHandler context = new ServletContextHandler();

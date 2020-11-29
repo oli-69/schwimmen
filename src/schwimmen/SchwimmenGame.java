@@ -123,15 +123,25 @@ public class SchwimmenGame extends CardGame {
      * Default Constructor. Creates an instance of this class.
      */
     public SchwimmenGame() {
-        this(Collections.synchronizedList(new ArrayList<>()));
+        this(Collections.synchronizedList(new ArrayList<>()), "");
+    }
+
+    /**
+     * Constructor. Creates an instance of this class from given Value.
+     *
+     * @param conferenceName the room name for the jitsi conference
+     */
+    public SchwimmenGame(String conferenceName) {
+        this(Collections.synchronizedList(new ArrayList<>()), conferenceName);
     }
 
     /**
      * Package protected constructor. Required for unit testing.
      *
      * @param gameStack injected game stack.
+     * @param conferenceName the room name for the jitsi conference
      */
-    SchwimmenGame(List<Card> gameStack) {
+    SchwimmenGame(List<Card> gameStack, String conferenceName) {
         super(CARDS_32);
         players = Collections.synchronizedList(new ArrayList<>());
         playerIdComparator = new PlayerIdComparator(players);
@@ -144,7 +154,7 @@ public class SchwimmenGame extends CardGame {
         gson = new Gson();
         finishSoundIds = new ArrayList<>();
         initFinishSoundIds();
-        videoRoomName = "Schwimmen-Online"; // + (System.currentTimeMillis() / 1000); // currently disabled, since Jitsi's iOS-App doesn't take the room name from the url.
+        videoRoomName = conferenceName;
         super.addPropertyChangeListener(new GameChangeListener(this));
     }
 
@@ -316,7 +326,8 @@ public class SchwimmenGame extends CardGame {
     /**
      * Getter for property mover.
      *
-     * @return the player which is allowed to select a move. (The game's 'cursor')
+     * @return the player which is allowed to select a move. (The game's
+     * 'cursor')
      */
     public SchwimmenPlayer getMover() {
         return mover;
@@ -324,6 +335,7 @@ public class SchwimmenGame extends CardGame {
 
     /**
      * Getter for current player move.
+     *
      * @return the current player's decision.
      */
     public PlayerMove getPlayertMove() {
@@ -332,6 +344,7 @@ public class SchwimmenGame extends CardGame {
 
     /**
      * Getter for property discover message.
+     *
      * @return the current discover message (if any).
      */
     public DiscoverMessage getDiscoverMessage() {
@@ -340,8 +353,10 @@ public class SchwimmenGame extends CardGame {
 
     /**
      * Getter for property ChangeStackAllowed.
+     *
      * @param player the player for which it is asked for.
-     * @return true if the player is allowed to change the stock cards (in the middle), false otherwise.
+     * @return true if the player is allowed to change the stock cards (in the
+     * middle), false otherwise.
      */
     public boolean isChangeStackAllowed(SchwimmenPlayer player) {
         return round != null && round.isChangeStackAllowed(player);
@@ -349,6 +364,7 @@ public class SchwimmenGame extends CardGame {
 
     /**
      * Getter for property knock allowed.
+     *
      * @return true if the player is allowed to knock, false otherwise.
      */
     public boolean isKnockAllowed() {
@@ -357,6 +373,7 @@ public class SchwimmenGame extends CardGame {
 
     /**
      * Setter for property WebRadioPlaying.
+     *
      * @param play true to turn on the webradio, false to turn off.
      */
     public void setWebRadioPlaying(boolean play) {
@@ -367,6 +384,7 @@ public class SchwimmenGame extends CardGame {
 
     /**
      * Getter for property WebradioPlaying.
+     *
      * @return true if the webradio is currently playing, false otherwise.
      */
     public boolean isWebradioPlaying() {
@@ -404,6 +422,7 @@ public class SchwimmenGame extends CardGame {
 
     /**
      * Adds a player to the list of attendees.
+     *
      * @param attendee player to add to the attendees.
      */
     public void addAttendee(SchwimmenPlayer attendee) {
@@ -425,6 +444,7 @@ public class SchwimmenGame extends CardGame {
 
     /**
      * Removes a player from the list of attendees.
+     *
      * @param attendee the player to remove from the attendees.
      */
     public void removeAttendee(SchwimmenPlayer attendee) {
