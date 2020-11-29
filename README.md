@@ -5,15 +5,14 @@
 
 During the corona pandemic and the associated contact restrictions, I decided to program the card game "Schwimmen" in an online version. "Swimming Online" enables contactless gaming with friends over the Internet.
 
-The software requires an HTML-5 capable web browser. Desktop PCs are supported as well as notebooks and mobile devices such as tablets and smartphones (only recommended for up to 3 players).
+The software requires an HTML-5 capable web browser. Desktop PCs are supported as well as notebooks and mobile devices such as tablets and smartphones (only recommended for up to 3 players). The user interface language is currently german only.
 
 Jitsi meet is integrated as the video conference service (web app in browser as well as mobile app).
 
 Java 8 is required on the server side. The server also needs a graphical user interface to open its main window. Not all control functions are available for the clients.
 The server is based on the Jetty WebServer. All runtime and test libraries used are stored in the "ext" folder. The server side is created as a Netbeans project.
 
-The client uses the SVG cards from https://github.com/htdebeer/SVG-cards
-At this point I would like to thank everyone who contributed to this excellent work.
+The client uses the SVG cards from https://github.com/htdebeer/SVG-cards. At this point I would like to thank everyone who contributed to this excellent work.
 
 Please note: The html folder contains media files (images, sounds) that I was able to find freely on the Internet. No research was carried out on license rights.
 
