@@ -727,22 +727,26 @@ public class SchwimmenGame extends CardGame {
 
     private void processDealCards(SchwimmenPlayer player) {
         if (player.equals(mover)) {
-            initRound();
-            shuffleStack();
-            for (int i = 0; i < 3; i++) {
+            if (gamePhase == GAMEPHASE.shuffle) {
+                initRound();
+                shuffleStack();
+                for (int i = 0; i < 3; i++) {
+                    attendees.forEach((attendee) -> {
+                        attendee.addToStack(getFromStack());
+                        if (attendee.equals(mover)) {
+                            dealerStack.add(getFromStack());
+                        }
+                    });
+                }
                 attendees.forEach((attendee) -> {
-                    attendee.addToStack(getFromStack());
-                    if (attendee.equals(mover)) {
-                        dealerStack.add(getFromStack());
-                    }
+                    attendee.getSocket().sendString(gson.toJson(new PlayerStack(attendee.getStack())));
                 });
-            }
-            attendees.forEach((attendee) -> {
-                attendee.getSocket().sendString(gson.toJson(new PlayerStack(attendee.getStack())));
-            });
-            setGamePhase(GAMEPHASE.dealCards);
-            if (isFinishStackExists()) {
-                discover();
+                setGamePhase(GAMEPHASE.dealCards);
+                if (isFinishStackExists()) {
+                    discover();
+                }
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.shuffle));
             }
         } else {
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht der Kartengeber!");
@@ -751,24 +755,28 @@ public class SchwimmenGame extends CardGame {
 
     private void processSelectStack(SchwimmenPlayer player, String action) {
         if (player.equals(mover)) {
-            switch (action) {
-                case "keep":
-                    gameStack.addAll(dealerStack);
-                    dealerStack.clear();
-                    break;
-                case "change":
-                    List<Card> playerStack = player.getStack();
-                    gameStack.addAll(playerStack);
-                    playerStack.clear();
-                    playerStack.addAll(dealerStack);
-                    dealerStack.clear();
-                    break;
-                default:
-                    LOGGER.error("Unkonwn action for selectDealerStack: '" + action + "'");
+            if (gamePhase == GAMEPHASE.dealCards) {
+                switch (action) {
+                    case "keep":
+                        gameStack.addAll(dealerStack);
+                        dealerStack.clear();
+                        break;
+                    case "change":
+                        List<Card> playerStack = player.getStack();
+                        gameStack.addAll(playerStack);
+                        playerStack.clear();
+                        playerStack.addAll(dealerStack);
+                        dealerStack.clear();
+                        break;
+                    default:
+                        LOGGER.error("Unkonwn action for selectDealerStack: '" + action + "'");
+                }
+                player.getSocket().sendString(gson.toJson(new PlayerStack(player.getStack())));
+                setPlayerMove(new PlayerMove(MOVE.selectStack, gameStack, action));
+                stepGamePhase();
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.dealCards));
             }
-            player.getSocket().sendString(gson.toJson(new PlayerStack(player.getStack())));
-            setPlayerMove(new PlayerMove(MOVE.selectStack, gameStack, action));
-            stepGamePhase();
         } else {
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht der Kartengeber!");
         }
@@ -776,19 +784,23 @@ public class SchwimmenGame extends CardGame {
 
     private void processSwapCard(SchwimmenPlayer player, SocketMessage message) {
         if (player.equals(mover)) {
-            List<Card> playerStack = player.getStack();
-            int playerStackId = message.jsonObject.get("playerStack").getAsInt();
-            int gameStackId = message.jsonObject.get("gameStack").getAsInt();
-            try {
-                Card cardTaken = gameStack.get(gameStackId);
-                Card cardGiven = playerStack.get(playerStackId);
-                playerStack.set(playerStackId, cardTaken);
-                gameStack.set(gameStackId, cardGiven);
-                player.getSocket().sendString(gson.toJson(new PlayerStack(playerStack)));
-                setPlayerMove(new PlayerMove(new CardSwap(cardGiven, cardTaken, playerStackId, gameStackId), gameStack));
-                stepGamePhase();
-            } catch (Exception e) {
-                LOGGER.error("Spieler '" + player.getName() + "' " + " Karten IDs ungueltig!");
+            if (gamePhase == GAMEPHASE.waitForPlayerMove) {
+                List<Card> playerStack = player.getStack();
+                int playerStackId = message.jsonObject.get("playerStack").getAsInt();
+                int gameStackId = message.jsonObject.get("gameStack").getAsInt();
+                try {
+                    Card cardTaken = gameStack.get(gameStackId);
+                    Card cardGiven = playerStack.get(playerStackId);
+                    playerStack.set(playerStackId, cardTaken);
+                    gameStack.set(gameStackId, cardGiven);
+                    player.getSocket().sendString(gson.toJson(new PlayerStack(playerStack)));
+                    setPlayerMove(new PlayerMove(new CardSwap(cardGiven, cardTaken, playerStackId, gameStackId), gameStack));
+                    stepGamePhase();
+                } catch (Exception e) {
+                    LOGGER.error("Spieler '" + player.getName() + "' " + " Karten IDs ungueltig!");
+                }
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForPlayerMove));
             }
         } else {
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
@@ -797,18 +809,22 @@ public class SchwimmenGame extends CardGame {
 
     private void processSwapAllCards(SchwimmenPlayer player) {
         if (player.equals(mover)) {
-            List<Card> playerStack = player.getStack();
-            List<Card> stackTaken = new ArrayList<>();
-            List<Card> stackGiven = new ArrayList<>();
-            stackTaken.addAll(gameStack);
-            stackGiven.addAll(playerStack);
-            gameStack.clear();
-            playerStack.clear();
-            gameStack.addAll(stackGiven);
-            playerStack.addAll(stackTaken);
-            player.getSocket().sendString(gson.toJson(new PlayerStack(playerStack)));
-            setPlayerMove(new PlayerMove(new StackSwap(stackGiven, stackTaken), gameStack));
-            stepGamePhase();
+            if (gamePhase == GAMEPHASE.waitForPlayerMove) {
+                List<Card> playerStack = player.getStack();
+                List<Card> stackTaken = new ArrayList<>();
+                List<Card> stackGiven = new ArrayList<>();
+                stackTaken.addAll(gameStack);
+                stackGiven.addAll(playerStack);
+                gameStack.clear();
+                playerStack.clear();
+                gameStack.addAll(stackGiven);
+                playerStack.addAll(stackTaken);
+                player.getSocket().sendString(gson.toJson(new PlayerStack(playerStack)));
+                setPlayerMove(new PlayerMove(new StackSwap(stackGiven, stackTaken), gameStack));
+                stepGamePhase();
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForPlayerMove));
+            }
         } else {
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
         }
@@ -816,9 +832,13 @@ public class SchwimmenGame extends CardGame {
 
     private void processPass(SchwimmenPlayer player) {
         if (player.equals(mover)) {
-            round.pass(player);
-            setPlayerMove(new PlayerMove(MOVE.pass, round.getPassCount(), gameStack));
-            stepGamePhase();
+            if (gamePhase == GAMEPHASE.waitForPlayerMove) {
+                round.pass(player);
+                setPlayerMove(new PlayerMove(MOVE.pass, round.getPassCount(), gameStack));
+                stepGamePhase();
+            } else {
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForPlayerMove));
+            }
         } else {
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
         }
@@ -826,12 +846,16 @@ public class SchwimmenGame extends CardGame {
 
     private void processKnock(SchwimmenPlayer player) {
         if (player.equals(mover)) {
-            if (isKnockAllowed()) {
-                round.knock(player);
-                setPlayerMove(new PlayerMove(MOVE.knock, round.getKnockCount(), gameStack));
-                stepGamePhase();
+            if (gamePhase == GAMEPHASE.waitForPlayerMove) {
+                if (isKnockAllowed()) {
+                    round.knock(player);
+                    setPlayerMove(new PlayerMove(MOVE.knock, round.getKnockCount(), gameStack));
+                    stepGamePhase();
+                } else {
+                    LOGGER.warn("Spieler '" + player.getName() + "' " + " darf nicht klopfen!");
+                }
             } else {
-                LOGGER.warn("Spieler '" + player.getName() + "' " + " darf nicht klopfen!");
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForPlayerMove));
             }
         } else {
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
@@ -840,19 +864,23 @@ public class SchwimmenGame extends CardGame {
 
     private void processChangeStack(SchwimmenPlayer player) {
         if (player.equals(mover)) {
-            if (isChangeStackAllowed(player)) {
-                if (!(stackSize() < 3)) {
-                    gameStack.clear();
-                    for (int i = 0; i < 3; i++) {
-                        gameStack.add(getFromStack());
+            if (gamePhase == GAMEPHASE.waitForPlayerMove) {
+                if (isChangeStackAllowed(player)) {
+                    if (!(stackSize() < 3)) {
+                        gameStack.clear();
+                        for (int i = 0; i < 3; i++) {
+                            gameStack.add(getFromStack());
+                        }
+                    } else {
+                        LOGGER.info("Es sind zu wenig Karten verfuegbar um zu tauschen.");
                     }
+                    setPlayerMove(new PlayerMove(MOVE.changeStack, gameStack));
+                    stepGamePhase(false);
                 } else {
-                    LOGGER.info("Es sind zu wenig Karten verfuegbar um zu tauschen.");
+                    LOGGER.warn("Spieler '" + player.getName() + "' " + " darf den Stapel nicht austauschen!");
                 }
-                setPlayerMove(new PlayerMove(MOVE.changeStack, gameStack));
-                stepGamePhase(false);
             } else {
-                LOGGER.warn("Spieler '" + player.getName() + "' " + " darf den Stapel nicht austauschen!");
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForPlayerMove));
             }
         } else {
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
@@ -936,7 +964,9 @@ public class SchwimmenGame extends CardGame {
                 return true;
             }
         }
-        return (isFinishStack(gameStack, getNextTo(mover)));
+        return false;         
+        // disabled this, since the next player must have the chance to make fire, even if there is 31 in the game stack.
+        // return  (isFinishStack(gameStack, getNextTo(mover)));
     }
 
     Round getRound() { // for unit testing

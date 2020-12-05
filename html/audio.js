@@ -48,7 +48,7 @@ function initAudio(readyFunction) {
             initSound(sound.finishSound[i]);
         }
         initSound(sound.radio);
-        sound.radio.volume = 0.25;
+        radioVolumeChanged();
 
         sound.chat.src = 'snd-chat.mp3';
         sound.online.src = 'snd-online.mp3';

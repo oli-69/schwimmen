@@ -75,7 +75,7 @@ public class SchwimmenSocket {
                         onLogoff(jsonObj);
                         break;
                     default:
-                        propChangeSupport.firePropertyChange(PROP_MESSAGE, null, new SocketMessage(action, message, jsonObj));
+                        processMessage(new SocketMessage(action, message, jsonObj));
                 }
             }
         } catch (Exception e) {
@@ -177,6 +177,10 @@ public class SchwimmenSocket {
             return false;
         }
         return true;
+    }
+
+    private synchronized void processMessage(SocketMessage socketMessage) {
+        propChangeSupport.firePropertyChange(PROP_MESSAGE, null, socketMessage);
     }
 
 }

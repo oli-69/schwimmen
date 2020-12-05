@@ -11,8 +11,8 @@
     <description>Builds, tests, and runs the project Schwimmen.</description>
     <import file="nbproject/build-impl.xml"/>
     <target name="-post-jar">
-            <copy file="local/default/settings.properties" tofile="${dist.dir}/settings.properties"/>
-            <copy file="local/default/users.properties" tofile="${dist.dir}/users.properties"/>
+            <copy file="settings.properties" tofile="${dist.dir}/settings.properties"/>
+            <copy file="users.properties" tofile="${dist.dir}/users.properties"/>
         <copydir src="html" dest="${dist.dir}/html"/>
     </target>
     <!--
