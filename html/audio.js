@@ -52,13 +52,14 @@ function initAudio(readyFunction) {
 
         sound.chat.src = 'snd-chat.mp3';
         sound.online.src = 'snd-online.mp3';
+
+        // load the sounds asynchronous in background
         setTimeout(function () {
             loadAudio(readyFunction);
         });
-    } else {
-        if (typeof readyFunction === "function") {
-            readyFunction();
-        }
+    }
+    if (typeof readyFunction === "function") {
+        readyFunction();
     }
 }
 
@@ -83,52 +84,14 @@ function loadAudio(readyFunction) {
     sound.fire.src = 'snd-fire.mp3';
     sound.coin.src = 'snd-coin.mp3';
     for (var i = 0; i < sound.finishSound.length; i++) {
-        sound.finishSound[i].src = 'finish/snd-finish-' + (( i<10) ? "0" : "")+i + '.mp3';
+        sound.finishSound[i].src = 'finish/snd-finish-' + ((i < 10) ? "0" : "") + i + '.mp3';
     }
-//    sound.radio.src = radioUrl;
-//    sound.radio.play();
-//    sound.radio.volume = 0.15;
-
     console.log("Audio loaded successfully");
     if (typeof readyFunction === "function") {
         readyFunction();
     }
 }
 
-//function GameAudio(url) {
-//    window.AudioContext = window.AudioContext || window.webkitAudioContext; //fix up prefixing
-//    this.context = new AudioContext(); //context
-//    this.buffer;
-//    this.source;
-//    var ref = this;
-//    var request = new XMLHttpRequest();
-//    request.open('GET', url, true);
-//    request.responseType = 'arraybuffer'; //the  response is an array of bits
-//    request.onload = function () {
-//        ref.context.decodeAudioData(request.response, function (response) {
-//            ref.buffer = response;
-////            console.log(url + " loaded successfully");
-//        }, function () {
-//            console.error('The request failed.');
-//        });
-//    }
-//    request.send();
-//}
-//
-//GameAudio.prototype.stop = function (looped) {
-//    this.source.stop(0);
-//}
-//
-//GameAudio.prototype.play = function (looped) {
-//    this.source = this.context.createBufferSource(); //source node
-//    this.source.connect(this.context.destination); //connect source to speakers so we can hear it
-//    this.source.buffer = this.buffer;
-//    this.source.start(0);
-//    this.source.loop = (looped !== undefined) ? looped : false;
-//};
-
-
-// Webradio
 function  toogleWebRadio() {
     setWebRadioPlaying(sound.radio.paused);
 }
