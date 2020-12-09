@@ -38,7 +38,7 @@ public class GameChangeListener implements PropertyChangeListener {
                 game.sendToPlayers("{\"action\":\"playWebradio\", \"play\": " + ((Boolean) evt.getNewValue()) + "}");
                 break;
             case SchwimmenGame.PROP_ATTENDEESLIST:
-                game.sendToPlayers(gson.toJson(new AttendeeList((List<SchwimmenPlayer>) evt.getNewValue(), game.getMover())));
+                game.sendToPlayers(gson.toJson(new AttendeeList((List<SchwimmenPlayer>) evt.getNewValue(), game.getAllAttendees(), game.getMover())));
                 break;
             case SchwimmenGame.PROP_PLAYERLIST:
                 game.sendToPlayers(gson.toJson(new PlayerList((List<SchwimmenPlayer>) evt.getNewValue())));
@@ -67,6 +67,8 @@ public class GameChangeListener implements PropertyChangeListener {
                 return new GamePhase(game.getPlayertMove(), actor);
             case waitForPlayerMove:
                 return new GamePhase(phase, actor, game.isChangeStackAllowed(actor), game.isKnockAllowed());
+            case shuffle:
+                return new GamePhase(phase, actor, game.getAllAttendees());
             default:
                 return new GamePhase(phase, actor);
         }

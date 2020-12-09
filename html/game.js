@@ -1,7 +1,8 @@
 var myName;
 var gamePhase;
-var players;
-var attendees;
+var players; // list of all players in the room
+var attendees; // list of players currently in game (still alive)
+var allAttendees; // list of players at start of a game (alive + dead)
 var mover;
 var playerStack;
 var gameStack;
@@ -61,6 +62,7 @@ function onGameState(message) {
     gamePhase = message.phase;
     players = message.playerList.players;
     attendees = message.attendeeList.attendees;
+    allAttendees = message.attendeeList.allAttendees;
     mover = message.mover;
     gameStack = message.gameStack.cards;
     playerStack = message.playerStack.cards;
@@ -83,6 +85,7 @@ function onGameState(message) {
 function onAttendeeList(message) {
     mover = (message.mover !== undefined) ? message.mover : mover;
     messageInProgress = false;
+    allAttendees = message.allAttendees;
     attendees = message.attendees;
     var myId = getMyAttendeeId();
     $("#addToAttendeesBtn").prop("disabled", (myId >= 0));
@@ -105,6 +108,10 @@ function onGamePhaseMessage(message) {
     mover = message.actor;
     switch (gamePhase) {
         case "shuffle":
+            allAttendees = message.allAttendees;
+            updateAttendeeStacks(undefined);
+            onGamePhase(gamePhase);
+            break;
         case "dealCards":
             updateAttendeeStacks(undefined);
             onGamePhase(gamePhase);
@@ -145,7 +152,7 @@ function onGamePhase(phase) {
     updatePlayerList();
     updateControlPanelMessage();
     updateCardStack($("#gameStack"), gameStack);
-    updateCardStack(attendeesStackDesks[getMyAttendeeId()], playerStack);
+    updateCardStack(attendeesStackDesks[getMyAllAttendeeId()], playerStack);
     updateAttendeeDeskColor();
     clearCardSelection();
 
@@ -349,7 +356,7 @@ function animateCardSwap(takenId, givenId, readyFunction) {
     var gameDeskWrapper = $($("#gameStack").children()[takenId]);
     var tSvg = $(gameDeskWrapper.children(0));
     var tPos = tSvg.offset();
-    var attendeeDesk = attendeesStackDesks[getMoverAttendeeId()];
+    var attendeeDesk = attendeesStackDesks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
     var attendeeDeskWrapper = $(attendeeDesk.children()[givenId]);
     var gSvg = $(attendeeDeskWrapper.children(0));
     var gPos = gSvg.offset();
@@ -417,16 +424,35 @@ function logStack(name, stack) {
     log(msg);
 }
 
+function isInAllAttendees() {
+    return getMyAllAttendeeId() >= 0;
+}
+
+function getAllAttendeeIdByPlayerId(playerId) {
+    if (allAttendees !== undefined) {
+        for (var i = 0; i < allAttendees.length; i++) {
+            if (allAttendees[i] === playerId) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+function getMyAllAttendeeId() {
+    return getAllAttendeeIdByPlayerId(getMyPlayerId());
+}
+
 function isAttendee() {
     return getMyAttendeeId() >= 0;
 }
 
-function getMyAttendeeId() {
-    return  getAttendeeIdByName(myName);
+function getMyPlayerId() {
+    return  getIdByName(myName, players);
 }
 
-function getMoverAttendeeId() {
-    return  getAttendeeIdByName(mover);
+function getMyAttendeeId() {
+    return  getAttendeeIdByName(myName);
 }
 
 function getAttendeeIdByName(name) {
@@ -506,24 +532,25 @@ function updatePlayerList() {
 function updateAttendeeList() {
     var panel = $("#attendeesPanel");
     panel.empty();
+    attendeesStackDesks = [];
     if (attendees !== undefined) {
-        var otherAttendeesCount = attendees.length - (isAttendee() ? 1 : 0);
-        var myId = getMyAttendeeId();
-        var numPl = attendees.length;
+        var otherAttendeesCount = allAttendees.length - (isInAllAttendees() ? 1 : 0);
+        var myId = getMyAllAttendeeId();
+        var numPl = allAttendees.length;
         var step = (2 * Math.PI) / (numPl + ((myId < 0) ? 1 : 0));
         var angle = Math.PI / 2 + step;
         var id = myId;
         for (var i = 0; i < numPl; i++) {
-            id = getNextAttendeeId(id);
-            var attendee = attendees[id];
+            id = getNextAllAttendeeId(id);
+            var name = players[ allAttendees[id] ].name;
+            var attendeeId = getAttendeeIdByName(name)
+            var token = attendeeId >= 0 ? attendees[attendeeId].gameTokens : -1;
             var child = $("<div class='attendeeDesk'></div>");
             var cardDesk = $("<div class='cardStack'></div>");
-            child.append(cardDesk).append($("<div class='attendeeNameContainer'><div class='attendeeName'>" + attendee.name + "</div><div class='tokenImage" + (attendee.gameTokens) + "'></div></div>"));
+            child.append(cardDesk).append($("<div class='attendeeNameContainer'><div class='attendeeName'>" + name + "</div><div class='tokenImage" + token + "'></div></div>"));
             attendeesStackDesks[id] = cardDesk;
             panel.append(child);
             var isSmallSize = panel.width() < 720;
-            var isBigSize = panel.width() >= 1120;
-            var isMidsize = !isSmallSize && !isBigSize;
             var rx = panel.width() * (!isSmallSize ? 0.3 : 0.25);
             var ry = panel.height() * 0.25;
             var l = (panel.width() >> 1) + rx * Math.cos(angle) - (child.outerWidth() >> 1);
@@ -534,7 +561,7 @@ function updateAttendeeList() {
             angle += step;
         }
         updateAttendeeDeskColor();
-        if (myId < 0) {
+        if (getMyAttendeeId() < 0) {
             $("#addToAttendeesBtn").show();
             $("#removeFromAttendeesBtn").hide();
         } else {
@@ -542,17 +569,16 @@ function updateAttendeeList() {
             $("#removeFromAttendeesBtn").show();
         }
     }
-//    log(panel.width() );
 }
 
 function updateAttendeeDeskColor() {
     if (attendees !== undefined) {
-        var myId = getMyAttendeeId();
-        var numPl = attendees.length;
+        var myId = getMyAllAttendeeId();
+        var numPl = allAttendees.length;
         var id = myId;
         for (var i = 0; i < numPl; i++) {
-            id = getNextAttendeeId(id);
-            var attendee = attendees[id];
+            id = getNextAllAttendeeId(id);
+            var attendee = players[allAttendees[id]];
             var className = (mover === attendee.name) ? "moverDesk" : "attendeeDesk";
             attendeesStackDesks[id].parent().prop("class", className);
         }
@@ -577,15 +603,16 @@ function updateAttendeeStacks(message) {
             discoverStacks = message.discoverMessage.playerStacks;
         }
     }
-    var myAttendeeId = getMyAttendeeId();
-    var myDesk = myAttendeeId >= 0 ? attendeesStackDesks[myAttendeeId] : undefined;
-    for (var i = 0; i < attendees.length; i++) {
+    var myAllAttendeeId = getMyAllAttendeeId();
+    var myDesk = myAllAttendeeId >= 0 ? attendeesStackDesks[myAllAttendeeId] : undefined;
+    for (var i = 0; i < allAttendees.length; i++) {
         var desk = attendeesStackDesks[i];
         if (desk !== myDesk) {
+            attendeeId = getAttendeeIdByName(players[allAttendees[i]].name);
             if (discoverStacks !== undefined) {
-                updateCardStack(desk, discoverStacks[ i ].cards);
+                updateCardStack(desk, (attendeeId >= 0) ? discoverStacks[ i ].cards : undefined);
             } else {
-                updateCardStack(desk, coveredStack);
+                updateCardStack(desk, (attendeeId >= 0) ? coveredStack : undefined);
             }
         } else {
             updateCardStack(desk, playerStack);
@@ -683,6 +710,11 @@ function updateControlPanelMessage() {
 function getNextAttendeeId(currentId) {
     var id = currentId + 1;
     return id < attendees.length ? id : 0;
+}
+
+function getNextAllAttendeeId(currentId) {
+    var id = currentId + 1;
+    return id < allAttendees.length ? id : 0;
 }
 
 function animateGameDialog(dialog, readyFunction) {

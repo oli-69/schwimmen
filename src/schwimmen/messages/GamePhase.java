@@ -12,6 +12,7 @@ public class GamePhase {
     public DiscoverMessage discoverMessage;
     public boolean changeStackAllowed;
     public boolean knockAllowed;
+    public int[] allAttendees;
 
     public GamePhase(GAMEPHASE phase) {
         this(phase, null);
@@ -19,6 +20,11 @@ public class GamePhase {
 
     public GamePhase(GAMEPHASE phase, SchwimmenPlayer actor) {
         this(phase, actor, false, false);
+    }
+
+    public GamePhase(GAMEPHASE phase, SchwimmenPlayer actor, int[] allAttendees) {
+        this(phase, actor);
+        this.allAttendees = allAttendees;
     }
 
     public GamePhase(GAMEPHASE phase, SchwimmenPlayer actor, boolean changeStackAllowed, boolean knockAllowed) {

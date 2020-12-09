@@ -101,7 +101,7 @@ public class SchwimmenGame extends CardGame {
 
     private final PlayerIdComparator playerIdComparator;
     private final List<SchwimmenPlayer> players; // List of all players in the room
-    private final List<SchwimmenPlayer> attendees; // sub-list of players, which are actually in the game.
+    private final List<SchwimmenPlayer> attendees; // sub-list of players, which are actually in the game (alive).
     private final List<SchwimmenPlayer> gameLeavers; // sub-list of attendees, which are already out (death)
     private final PropertyChangeListener playerListener;
     private final List<Card> gameStack; // Stock in the middle of the game, visible to all players.
@@ -112,6 +112,7 @@ public class SchwimmenGame extends CardGame {
     private final String videoRoomName;
 
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
+    private int[] allAttendees; // IDs of players at start of the game (alive + death).
     private SchwimmenPlayer gameLooser = null;
     private SchwimmenPlayer mover = null; // this is like the cursor or pointer of the player which has to move. 
     private PlayerMove playerMove = null;
@@ -146,6 +147,7 @@ public class SchwimmenGame extends CardGame {
         players = Collections.synchronizedList(new ArrayList<>());
         playerIdComparator = new PlayerIdComparator(players);
         attendees = Collections.synchronizedList(new ArrayList<>());
+        allAttendees = new int[0];
         gameLeavers = Collections.synchronizedList(new ArrayList<>());
         this.gameStack = gameStack;
         this.dealerStack = Collections.synchronizedList(new ArrayList<>());
@@ -302,7 +304,17 @@ public class SchwimmenGame extends CardGame {
                 }
             }
         }
-        return new GameStateMessage(gamePhase.name(), players, attendees, mover, gameStack, player.getStack(), isChangeStackAllowed(player), isKnockAllowed(), discoverStacks, webradioPlaying);
+        return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, mover, gameStack, player.getStack(), isChangeStackAllowed(player), isKnockAllowed(), discoverStacks, webradioPlaying);
+    }
+
+    /**
+     * Getter for Property allAttendees.
+     *
+     * @return a list of player ids of the players at the start of a game (dead
+     * + alive)
+     */
+    public int[] getAllAttendees() {
+        return allAttendees;
     }
 
     /**
@@ -407,7 +419,7 @@ public class SchwimmenGame extends CardGame {
             }
         });
         offlineAttendees.forEach(attendee -> removeAttendee(attendee));
-        if (offlineAttendees.isEmpty()) {
+        if (offlineAttendees.isEmpty()) { // ensure the event is fired at least once.
             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
         }
         setGamePhase(GAMEPHASE.shuffle);
@@ -431,6 +443,12 @@ public class SchwimmenGame extends CardGame {
                 if (players.contains(attendee)) {
                     attendees.add(attendee);
                     Collections.sort(attendees, playerIdComparator);
+                    if (gamePhase == GAMEPHASE.waitForAttendees) {
+                        allAttendees = new int[attendees.size()];
+                        for (int i = 0; i < allAttendees.length; i++) {
+                            allAttendees[i] = players.indexOf(attendees.get(i));
+                        }
+                    }
                     firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
                     LOGGER.debug("Player '" + attendee + "' added to attendees list");
                 } else {
@@ -457,6 +475,12 @@ public class SchwimmenGame extends CardGame {
             attendees.remove(attendee);
             if (attendee.equals(mover)) {
                 mover = guessNextGameStarter();
+            }
+            if (gamePhase == GAMEPHASE.waitForAttendees) {
+                allAttendees = new int[attendees.size()];
+                for (int i = 0; i < allAttendees.length; i++) {
+                    allAttendees[i] = players.indexOf(attendees.get(i));
+                }
             }
             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
             LOGGER.debug("Player '" + attendee + "' removed from attendees list");
@@ -661,11 +685,14 @@ public class SchwimmenGame extends CardGame {
                             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
                             players.forEach(p -> p.reset());
                             players.forEach(p -> p.getSocket().sendString(gson.toJson(
-                                    new GameStateMessage(gamePhase.name(), players, attendees, mover, gameStack, new ArrayList<Card>(), false, false, null, webradioPlaying))));
+                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, mover, gameStack, new ArrayList<Card>(), false, false, null, webradioPlaying))));
                             setGamePhase(GAMEPHASE.waitForAttendees);
                         } else {
-                            players.forEach(p -> p.getSocket().sendString(gson.toJson(
-                                    new GameStateMessage(gamePhase.name(), players, attendees, mover, gameStack, new ArrayList<Card>(), false, false, null, webradioPlaying))));
+                            players.forEach(p -> {
+                                p.getStack().clear();
+                                p.getSocket().sendString(gson.toJson(
+                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, mover, gameStack, new ArrayList<Card>(), false, false, null, webradioPlaying)));}
+                            );
                             setGamePhase(GAMEPHASE.shuffle);
                         }
                         break;
@@ -964,7 +991,7 @@ public class SchwimmenGame extends CardGame {
                 return true;
             }
         }
-        return false;         
+        return false;
         // disabled this, since the next player must have the chance to make fire, even if there is 31 in the game stack.
         // return  (isFinishStack(gameStack, getNextTo(mover)));
     }

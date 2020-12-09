@@ -18,12 +18,12 @@ public class GameStateMessage {
     public CardStack[] discoverStacks;
     public boolean webradioPlaying;
 
-    public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees,
+    public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
             SchwimmenPlayer mover, List<cardgame.Card> gameStack, List<cardgame.Card> playerStack,
             boolean changeStackAllowed, boolean knockAllowed, List<DiscoverStack> discoverStacks, boolean webradioPlaying) {
         this.phase = phase;
         this.playerList = new PlayerList(players);
-        this.attendeeList = new AttendeeList(attendees, mover);
+        this.attendeeList = new AttendeeList(attendees, allAttendees, mover);
         this.mover = mover != null ? mover.getName() : "";
         this.gameStack = new CardStack(gameStack);
         this.playerStack = new CardStack(playerStack);
