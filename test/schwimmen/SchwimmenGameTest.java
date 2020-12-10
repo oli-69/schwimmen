@@ -415,9 +415,7 @@ public class SchwimmenGameTest {
         startWith2Players();
         socket1.onText("{\"action\": \"dealCards\"}");
         make31(gameStack);
-        assertTrue(game.isFinishStackExists());
-        assertEquals(player2, game.getRound().finisher);
-        assertEquals(31f, game.getRound().finishScore, 0f);
+        assertFalse(game.isFinishStackExists());
     }
 
     @Test
