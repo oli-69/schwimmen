@@ -144,11 +144,21 @@ var UICard = function (color, value, fetchFunction) {
     });
     this.ui.append(this.img);
 
-    var clickedCard = this;
+    var activeCard = this;
     if (color !== undefined && value !== undefined) {
         this.ui[0].onclick = function () {
             if (typeof processCardClick === "function") {
-                processCardClick(clickedCard);
+                processCardClick(activeCard);
+            }
+        };
+        this.ui[0].onmouseover = function () {
+            if (typeof processCardHover === "function") {
+                processCardHover(activeCard, true);
+            }
+        };
+        this.ui[0].onmouseout = function () {
+            if (typeof processCardHover === "function") {
+                processCardHover(activeCard, false);
             }
         };
     }
@@ -164,12 +174,35 @@ UICard.prototype.setSelected = function (selected) {
     this.ui.css("background-color", (selected ? "#0000FF" : "rgba(0,0,0,0)"));
 };
 
+UICard.prototype.setHover = function (isHover) {
+    if (!this.selected) {
+        var imgOpacity = isHover ? "0.875" : "1";
+        var bgColor = isHover ? "#FFAA00" : "rgba(0,0,0,0)";
+        var cursor = isHover ? "pointer" : "auto";
+        this.img.css("opacity", imgOpacity);
+        this.ui.css("background-color", bgColor);
+        this.ui.css("cursor", cursor);
+    }
+};
+
+UICard.prototype.reset = function () {
+    this.setHover(false);
+    this.setSelected(false);
+};
+
+function resetUICards() {
+    uiCards.forEach(function (color) {
+        color.forEach(function (card) {
+            card.reset();
+        });
+    });
+}
 
 function getSvgName(color, value) {
     if (color !== undefined && value !== undefined) {
         return getSvgColor(color) + "_" + getSvgValue(value);
     }
-    return "back";
+    return "back-navy";
 }
 
 function getSvgValue(value) {

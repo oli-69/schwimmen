@@ -3,14 +3,20 @@ package schwimmen;
 import cardgame.Card;
 import cardgame.CardGame;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import schwimmen.messages.AskForCardShow;
+import schwimmen.messages.AskForCardView;
 import schwimmen.messages.CardSwap;
 import schwimmen.messages.ChatMessage;
 import schwimmen.messages.DiscoverMessage;
@@ -19,6 +25,8 @@ import schwimmen.messages.GameStateMessage;
 import schwimmen.messages.PlayerMove;
 import schwimmen.messages.PlayerStack;
 import schwimmen.messages.StackSwap;
+import schwimmen.messages.ViewerStack;
+import schwimmen.messages.ViewerStackList;
 
 /**
  * This class implements the game rules and evaluates the player's decisions.
@@ -97,12 +105,16 @@ public class SchwimmenGame extends CardGame {
     public static final String PROP_ATTENDEESLIST = "attendeesList";
     public static final String PROP_PLAYERLIST = "playerList";
     public static final String PROP_PLAYER_ONLINE = "playerOnline";
+    public static final String PROP_VIEWER_MAP = "viewerMap";
     public static final String PROP_WEBRADIO_PLAYING = "webradioPlaying";
 
     private final PlayerIdComparator playerIdComparator;
     private final List<SchwimmenPlayer> players; // List of all players in the room
     private final List<SchwimmenPlayer> attendees; // sub-list of players, which are actually in the game (alive).
     private final List<SchwimmenPlayer> gameLeavers; // sub-list of attendees, which are already out (death)
+    private final Map<SchwimmenPlayer, List<SchwimmenPlayer>> viewerMap;
+    private final Map<Integer, AskForCardView> askForViewMap;
+    private final Map<Integer, AskForCardShow> askForShowMap;
     private final PropertyChangeListener playerListener;
     private final List<Card> gameStack; // Stock in the middle of the game, visible to all players.
     private final List<Card> dealerStack; // 2nd stack while dealing cards.
@@ -149,6 +161,9 @@ public class SchwimmenGame extends CardGame {
         attendees = Collections.synchronizedList(new ArrayList<>());
         allAttendees = new int[0];
         gameLeavers = Collections.synchronizedList(new ArrayList<>());
+        viewerMap = new HashMap<>();
+        askForViewMap = new HashMap<>();
+        askForShowMap = new HashMap<>();
         this.gameStack = gameStack;
         this.dealerStack = Collections.synchronizedList(new ArrayList<>());
         playerListener = this::playerPropertyChanged;
@@ -304,7 +319,9 @@ public class SchwimmenGame extends CardGame {
                 }
             }
         }
-        return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, mover, gameStack, player.getStack(), isChangeStackAllowed(player), isKnockAllowed(), discoverStacks, webradioPlaying);
+        return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
+                gameStack, player.getStack(), getViewerStackList(player), isChangeStackAllowed(player), isKnockAllowed(),
+                discoverStacks, webradioPlaying);
     }
 
     /**
@@ -333,6 +350,41 @@ public class SchwimmenGame extends CardGame {
      */
     public GAMEPHASE getGamePhase() {
         return gamePhase;
+    }
+
+    /**
+     * Getter for property viewer map.
+     *
+     * @return the map of card viewers for all players.
+     */
+    public Map<SchwimmenPlayer, List<SchwimmenPlayer>> getViewerMap() {
+        return viewerMap;
+    }
+
+    /**
+     * Getter for the viewer stack list for a player.
+     *
+     * @param player the viewing player.
+     * @return a list of card stacks, which the player is viewing.
+     */
+    public ViewerStackList getViewerStackList(SchwimmenPlayer player) {
+        Iterator<SchwimmenPlayer> iterator = viewerMap.keySet().iterator();
+        List<SchwimmenPlayer> showerList = new ArrayList<>();
+        while (iterator.hasNext()) {
+            SchwimmenPlayer shower = iterator.next();
+            List<SchwimmenPlayer> viewers = viewerMap.get(shower);
+            if (viewers != null && viewers.contains(player)) {
+                showerList.add(shower);
+            }
+        }
+        if (!showerList.isEmpty()) {
+            ViewerStack[] viewerStacks = new ViewerStack[showerList.size()];
+            for (int i = 0; i < viewerStacks.length; i++) {
+                viewerStacks[i] = new ViewerStack(showerList.get(i));
+            }
+            return new ViewerStackList(viewerStacks);
+        }
+        return new ViewerStackList();
     }
 
     /**
@@ -409,6 +461,9 @@ public class SchwimmenGame extends CardGame {
     public void startGame() {
         mover = guessNextGameStarter();
         gameLeavers.clear();
+        viewerMap.clear();
+        askForViewMap.clear();
+        askForShowMap.clear();
         gameLooser = null;
         initRound();
         List<SchwimmenPlayer> offlineAttendees = new ArrayList<>();
@@ -422,6 +477,7 @@ public class SchwimmenGame extends CardGame {
         if (offlineAttendees.isEmpty()) { // ensure the event is fired at least once.
             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
         }
+        firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
         setGamePhase(GAMEPHASE.shuffle);
     }
 
@@ -499,12 +555,15 @@ public class SchwimmenGame extends CardGame {
                 firePropertyChange(PROP_PLAYER_ONLINE, null, evt.getSource());
                 break;
             case SchwimmenPlayer.PROP_SOCKETMESSAGE:
-                processMessageFromPlayer((SchwimmenPlayer) evt.getSource(), (SocketMessage) evt.getNewValue());
+                processMessage((SchwimmenPlayer) evt.getSource(), (SocketMessage) evt.getNewValue());
                 break;
         }
     }
 
-    private void processMessageFromPlayer(SchwimmenPlayer player, SocketMessage message) {
+    /*
+    /* Messages from the players 
+     */
+    private void processMessage(SchwimmenPlayer player, SocketMessage message) {
         switch (message.action) {
             case "addToAttendees":
                 addAttendee(player);
@@ -538,6 +597,24 @@ public class SchwimmenGame extends CardGame {
                 break;
             case "changeStack":
                 processChangeStack(player);
+                break;
+            case "askForCardView":
+                processAskForCardView(player, message.jsonObject.get("target").getAsString());
+                break;
+            case "askForCardViewResponse":
+                processAskForCardViewResponse(player, message);
+                break;
+            case "askForCardShow":
+                processAskForCardShow(player, message.jsonObject.get("target").getAsString());
+                break;
+            case "askForCardShowResponse":
+                processAskForCardShowResponse(player, message);
+                break;
+            case "stopCardViewing":
+                processStopCardViewing(player, message);
+                break;
+            case "stopCardShowing":
+                processStopCardShowing(player, message);
                 break;
             case "chat":
                 chat(message.jsonObject.get("text").getAsString(), player);
@@ -668,12 +745,21 @@ public class SchwimmenGame extends CardGame {
                                 gameLooser = leaver; // dealer for the next game
                             }
                             gameLeavers.add(leaver);
+                            List<SchwimmenPlayer> viewerList = viewerMap.get(leaver);
+                            if (viewerList != null) {
+                                viewerList.clear();
+                            }
                             attendees.remove(leaver); // swimming & paying -> death
                             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
 
                         });
                         if (attendees.size() == 1) { // game over
-                            attendees.get(0).addTotalTokens(3 * gameLeavers.size());
+                            SchwimmenPlayer winner = attendees.get(0);
+                            List<SchwimmenPlayer> viewerList = viewerMap.get(winner);
+                            if (viewerList != null) {
+                                viewerList.clear();
+                            }
+                            winner.addTotalTokens(3 * gameLeavers.size());
                             gameLeavers.forEach(leaver -> {
                                 leaver.removeTotalTokens(3);
                                 if (leaver.isOnline()) {
@@ -685,13 +771,16 @@ public class SchwimmenGame extends CardGame {
                             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
                             players.forEach(p -> p.reset());
                             players.forEach(p -> p.getSocket().sendString(gson.toJson(
-                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, mover, gameStack, new ArrayList<Card>(), false, false, null, webradioPlaying))));
+                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
+                                            gameStack, new ArrayList<>(), new ViewerStackList(), false, false, null, webradioPlaying))));
                             setGamePhase(GAMEPHASE.waitForAttendees);
                         } else {
                             players.forEach(p -> {
                                 p.getStack().clear();
                                 p.getSocket().sendString(gson.toJson(
-                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, mover, gameStack, new ArrayList<Card>(), false, false, null, webradioPlaying)));}
+                                        new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
+                                                gameStack, new ArrayList<>(), new ViewerStackList(), false, false, null, webradioPlaying)));
+                            }
                             );
                             setGamePhase(GAMEPHASE.shuffle);
                         }
@@ -912,6 +1001,167 @@ public class SchwimmenGame extends CardGame {
         } else {
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
         }
+    }
+
+    private void processAskForCardViewResponse(SchwimmenPlayer player, SocketMessage message) {
+        AskForCardView question = null;
+        JsonElement hashCodeElement = message.jsonObject.get("hashCode");
+        if (hashCodeElement != null) {
+            question = askForViewMap.get(hashCodeElement.getAsInt());
+        }
+        if (question == null) {
+            LOGGER.warn("Received invalid AskForView-Response: no question available");
+            return;
+        }
+        JsonElement valueElement = message.jsonObject.get("value");
+        if (valueElement == null) {
+            LOGGER.warn("Received invalid AskForView-Response: no value available");
+            return;
+        }
+        if (valueElement.getAsBoolean() && attendees.contains(player)) {
+            List<SchwimmenPlayer> viewerList = viewerMap.get(player);
+            if (viewerList == null) {
+                viewerList = new ArrayList<>();
+                viewerMap.put(player, viewerList);
+            }
+            SchwimmenPlayer viewer = getPlayer(question.source);
+            viewerList.add(viewer);
+            firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
+            viewer.getSocket().sendString(gson.toJson(getGameState(viewer)));
+            chat(question.source + " schaut bei " + player.getName() + " in die Karten.");
+        } else {
+            chat(player.getName() + " l&auml;sst " + question.source + " nicht in die Karten schauen.");
+        }
+        askForViewMap.remove(question.hashCode);
+    }
+
+    private void processAskForCardView(SchwimmenPlayer player, String target) {
+        if (attendees.contains(player)) {
+            LOGGER.warn("Player '" + player.getName() + "' is in game and therefore not allowed to view other cards!");
+            return;
+        }
+        SchwimmenPlayer targetPlayer = getPlayer(target);
+        if (targetPlayer == null) {
+            LOGGER.warn("Player '" + target + "' doesn't exist!");
+            return;
+        }
+        if (!targetPlayer.isOnline()) {
+            LOGGER.warn("Player '" + target + "' is not online!");
+            return;
+        }
+        if (!attendees.contains(targetPlayer)) {
+            LOGGER.warn("Player '" + target + "' is not in game!");
+            return;
+        }
+        List<SchwimmenPlayer> viewerList = viewerMap.get(targetPlayer);
+        if (viewerList != null && viewerList.contains(player)) {
+            LOGGER.warn("Player '" + player.getName() + "' is already viewer of " + target + "!");
+            return;
+        }
+
+        AskForCardView askForCardView = new AskForCardView(player);
+        askForViewMap.put(askForCardView.hashCode, askForCardView);
+        targetPlayer.getSocket().sendString(gson.toJson(askForCardView));
+    }
+
+    private void processAskForCardShowResponse(SchwimmenPlayer player, SocketMessage message) {
+        AskForCardShow question = null;
+        JsonElement hashCodeElement = message.jsonObject.get("hashCode");
+        if (hashCodeElement != null) {
+            question = askForShowMap.get(hashCodeElement.getAsInt());
+        }
+        if (question == null) {
+            LOGGER.warn("Received invalid AskForShow-Response: no question available");
+            return;
+        }
+        JsonElement valueElement = message.jsonObject.get("value");
+        if (valueElement == null) {
+            LOGGER.warn("Received invalid AskForShow-Response: no value available");
+            return;
+        }
+        if (valueElement.getAsBoolean()) {
+            SchwimmenPlayer askingPlayer = getPlayer(question.source);
+            if (attendees.contains(askingPlayer)) {
+                List<SchwimmenPlayer> viewerList = viewerMap.get(askingPlayer);
+                if (viewerList == null) {
+                    viewerList = new ArrayList<>();
+                    viewerMap.put(askingPlayer, viewerList);
+                }
+                viewerList.add(player);
+                firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
+                player.getSocket().sendString(gson.toJson(getGameState(player)));
+                chat(askingPlayer.getName() + " zeigt " + player.getName() + " die Karten.");
+            }
+        } else {
+            chat(player.getName() + " m&ouml;chte die Karten von " + question.source + " nicht sehen.");
+        }
+        askForShowMap.remove(question.hashCode);
+    }
+
+    private void processAskForCardShow(SchwimmenPlayer player, String target) {
+        if (!attendees.contains(player)) {
+            LOGGER.warn("Player '" + player.getName() + "' is not in game and therefore can't show cards!");
+            return;
+        }
+        SchwimmenPlayer targetPlayer = getPlayer(target);
+        if (targetPlayer == null) {
+            LOGGER.warn("Player '" + target + "' doesn't exist!");
+            return;
+        }
+        if (!targetPlayer.isOnline()) {
+            LOGGER.warn("Player '" + target + "' is not online!");
+            return;
+        }
+        if (attendees.contains(targetPlayer)) {
+            LOGGER.warn("Player '" + target + "' is in game!");
+            return;
+        }
+        List<SchwimmenPlayer> viewerList = viewerMap.get(player);
+        if (viewerList != null && viewerList.contains(targetPlayer)) {
+            LOGGER.warn("Player '" + target + "' is already viewer of " + player.getName() + "!");
+            return;
+        }
+
+        AskForCardShow askForCardShow = new AskForCardShow(player);
+        askForShowMap.put(askForCardShow.hashCode, askForCardShow);
+        targetPlayer.getSocket().sendString(gson.toJson(askForCardShow));
+    }
+
+    private void processStopCardViewing(SchwimmenPlayer player, SocketMessage message) {
+        String targetName = message.jsonObject.get("target").getAsString();
+        SchwimmenPlayer targetPlayer = getPlayer(targetName);
+        if (targetPlayer == null) {
+            LOGGER.warn("Player '" + targetName + "' doesn't exist!");
+            return;
+        }
+        List<SchwimmenPlayer> viewerList = viewerMap.get(targetPlayer);
+        if (viewerList == null || !viewerList.contains(player)) {
+            LOGGER.warn("Player '" + player.getName() + "' is not viewer of player '" + targetName + "'!");
+            return;
+        }
+        viewerList.remove(player);
+        firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
+        player.getSocket().sendString(gson.toJson(getGameState(player)));
+        chat(player.getName() + " schaut nicht mehr bei " + targetName + " in die Karten.");
+
+    }
+
+    private void processStopCardShowing(SchwimmenPlayer player, SocketMessage message) {
+        String targetName = message.jsonObject.get("target").getAsString();
+        SchwimmenPlayer targetPlayer = getPlayer(targetName);
+        if (targetPlayer == null) {
+            LOGGER.warn("Player '" + targetName + "' doesn't exist!");
+            return;
+        }
+        List<SchwimmenPlayer> viewerList = viewerMap.get(player);
+        if (viewerList == null || !viewerList.contains(targetPlayer)) {
+            LOGGER.warn("Player '" + targetName + "' is not viewer of player '" + player.getName() + "'!");
+            return;
+        }
+        viewerList.remove(targetPlayer);
+        firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
+        targetPlayer.getSocket().sendString(gson.toJson(getGameState(targetPlayer)));
+        chat(player.getName() + " zeigt " + targetName + " die Karten nicht mehr.");
     }
 
     /**

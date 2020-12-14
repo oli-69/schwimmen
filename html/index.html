@@ -53,7 +53,7 @@
                             <input type="text" id="chatMessage" />
                         </div>
                         <div id="chatContainerRight">
-                            <div id="webradio"><input type="range" id="webRadioSlider" onchange="radioVolumeChanged()" value="15"><div id="webRadioBtn" onClick="toogleWebRadio()"></div></div>
+                            <div id="webradio"><input type="range" id="webRadioSlider" onchange="radioVolumeChanged()" value="20"><div id="webRadioBtn" onClick="toogleWebRadio()"></div></div>
                             <input type="button" id="videoBtn" value="Video" onclick="openVideo()" />
                             <input type="button" id="chatBtn" value="Send" onclick="sendChatMessage()" />
                         </div>
@@ -70,6 +70,7 @@
                     <input type="button" class="dialogButton" id="startDealingBtn" value="Starte ausgeben!" onclick="startDealing()" />
                 </div>
                 <div id="selectDealerStackDialog">
+                    <div>W&auml;hle Deine Karten</div><br>
                     <input type="button" class="dialogButton" id="keepStackBtn" value="Stapel behalten" onclick="keepDealerStack()" /> 
                     <input type="button" class="dialogButton" id="changeStackBtn" value="Anderen Stapel nehmen" onclick="changeDealerStack()" /> 
                 </div>
@@ -86,6 +87,23 @@
                     <div id="discoverMessage"></div><br>
                     <input type="button" class="dialogButton" id="nextRoundBtn" value="Weiter" onclick="nextRound()" /> 
                 </div>
+                <div id="askForViewCardsDialog">
+                    <div id="askForViewCardsMessage"></div><br>
+                    <input type="button" class="dialogButton" value="Zulassen" onclick="viewCardsResponse(true)" /> 
+                    <input type="button" class="dialogButton" value="Ablehneh" onclick="viewCardsResponse(false)" /> 
+                </div>
+                <div id="askForShowCardsDialog">
+                    <div id="askForShowCardsMessage"></div><br>
+                    <input type="button" class="dialogButton" value="Annehmen" onclick="showCardsResponse(true)" /> 
+                    <input type="button" class="dialogButton" value="Ablehnen" onclick="showCardsResponse(false)" /> 
+                </div>
+            </div>
+            <div id="playerPopupMenu">
+                <div id="playerPopupMenuTitle">Name</div>
+                <div class="playerPopupMenuItem" id="miAskForViewCards">In die Karten schauen</div>
+                <div class="playerPopupMenuItem" id="miAskForShowCards">Die Karten zeigen</div>
+                <div class="playerPopupMenuItem" id="miStopViewCards">In die Karten schauen beenden</div>
+                <div class="playerPopupMenuItem" id="miStopShowCards">Die Karten zeigen beenden</div>
             </div>
 
             <div id="loginPage">

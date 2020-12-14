@@ -17,6 +17,7 @@ function SoundFiles() {
     this.finish31 = new Audio();
     this.fire = new Audio();
     this.coin = new Audio();
+    this.askview = new Audio();
     this.finishSound = [];
     this.finishSound.length = 12;
     for (var i = 0; i < this.finishSound.length; i++) {
@@ -44,6 +45,7 @@ function initAudio(readyFunction) {
         initSound(sound.finish31);
         initSound(sound.fire);
         initSound(sound.coin);
+        initSound(sound.askview);
         for (var i = 0; i < sound.finishSound.length; i++) {
             initSound(sound.finishSound[i]);
         }
@@ -83,6 +85,7 @@ function loadAudio(readyFunction) {
     sound.finish31.src = 'snd-finish31.mp3';
     sound.fire.src = 'snd-fire.mp3';
     sound.coin.src = 'snd-coin.mp3';
+    sound.askview.src = 'snd-askview.mp3';
     for (var i = 0; i < sound.finishSound.length; i++) {
         sound.finishSound[i].src = 'finish/snd-finish-' + ((i < 10) ? "0" : "") + i + '.mp3';
     }

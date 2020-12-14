@@ -11,6 +11,7 @@ public class PlayerMove {
     public CardStack gameStack;
     public int count;
     public String stackAction;
+    public ViewerStackList viewerStackList;
 
     public PlayerMove(MOVE move, List<cardgame.Card> gameStack) {
         this.move = move.name();

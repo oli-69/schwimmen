@@ -2,6 +2,7 @@ var webSocket;
 var isOnline = false;
 var fadePanelSpeed = 500;
 var messageBuffer = [];
+var questionMessageBuffer = [];
 var videoWindow;
 var videoRoomName = "";
 
@@ -180,6 +181,23 @@ function onServerMessage(data) {
         case "playerStack":
             messageBuffer.push(function () {
                 onPlayerStack(message);
+            });
+            break;
+        case "askForCardView":
+            questionMessageBuffer.push(function () {
+                onAskForCardView(message);
+            });
+            onQuestionMessageBuffer();
+            break;
+        case "askForCardShow":
+            questionMessageBuffer.push(function () {
+                onAskForCardShow(message);
+            });
+            onQuestionMessageBuffer();
+            break;
+        case "viewerMap":
+            messageBuffer.push(function () {
+                onViewerMap(message);
             });
             break;
         case "ping":

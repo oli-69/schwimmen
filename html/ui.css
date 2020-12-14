@@ -127,7 +127,7 @@ main {
     background-color: rgba(17,12,12,0.4);
     border-color: rgba(17,12,12,0.5);
     border-style: solid;
-    border-width: 2px;
+    border-width: 1px;
     border-radius:  0.5em;
     padding: 0.25em;
     display: flex;
@@ -148,8 +148,18 @@ main {
     flex-direction: row;
 }
 .attendeeName{
+    font-style: italic;
     text-align: center;
     flex-grow: 1;
+}
+.cardViewerName{
+    color: silver;
+    font-weight: lighter;
+    font-size: 0.6em;
+    font-style:normal;
+    width: 100%;
+    text-align: left;
+
 }
 .tokenImage3, .tokenImage2, .tokenImage1, .tokenImage0, .tokenImage-1{
     background-size: cover;
@@ -220,7 +230,12 @@ main {
     text-align: center;
 }
 
-#joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, #dealerStackSelectedDialog{
+.playerPopupEnabled:hover{
+    cursor: pointer;
+}
+
+#joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, 
+#dealerStackSelectedDialog, #askForViewCardsDialog, #askForShowCardsDialog{
     text-align: center;
     background-color: rgba(0,0,0,0.6);
     color: white;
@@ -249,6 +264,46 @@ main {
 
 #gamePage{
     display: block;
+}
+
+#playerPopupMenu{
+    background-color: silver;
+    position: absolute;
+    border-color: black;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+}
+
+#playerPopupMenuTitle{
+    background-color: #0074b6;
+    color: white;
+    cursor: default;
+    text-align: center;
+    min-width: 3em;
+    padding: 0.25em 1em 0.25em 1em;
+    margin-bottom: 0.2em;
+}
+
+.playerPopupMenuItem{
+    color: black;
+    padding: 0.15em 1em 0.15em 1em;
+    margin-bottom: 0.2em;
+    border-bottom: 1px solid darkgray;
+}
+
+.playerPopupMenuItemDisabled{
+    color:#888888;
+    padding: 0.15em 1em 0.15em 1em;
+    margin-bottom: 0.2em;
+    border-bottom: 1px solid darkgray;
+    cursor: default;
+}
+
+.playerPopupMenuItem:hover{
+    background-color: #0074b6;
+    color: white;
+    cursor: pointer;
 }
 
 #loginPage{
@@ -355,7 +410,8 @@ main {
     #controlPanel{
         padding: 0.4em;
     }
-    #joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, #dealerStackSelectedDialog{
+    #joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, 
+    #dealerStackSelectedDialog, #askForViewCardsDialog, #askForShowCardsDialog{
         background-color: rgba(0,0,0,0.75);
         font-size: 1.3em;
     }
@@ -417,7 +473,8 @@ main {
     #controlPanel{
         padding: 0.6em;
     }
-    #joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, #dealerStackSelectedDialog{
+    #joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, 
+    #dealerStackSelectedDialog, #askForViewCardsDialog, #askForShowCardsDialog{
         font-size: 1.6em;
     }
 

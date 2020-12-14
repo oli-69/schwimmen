@@ -22,6 +22,9 @@ import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
 import schwimmen.SchwimmenGame.GAMEPHASE;
 import schwimmen.SchwimmenGame.MOVE;
+import schwimmen.messages.AskForCardShow;
+import schwimmen.messages.AskForCardView;
+import schwimmen.messages.ChatMessage;
 import schwimmen.messages.DiscoverMessage;
 import schwimmen.messages.DiscoverStack;
 import schwimmen.messages.GamePhase;
@@ -43,15 +46,23 @@ public class SchwimmenGameTest {
     private SchwimmenPlayer player1;
     private SchwimmenPlayer player2;
     private SchwimmenPlayer player3;
+    private SchwimmenPlayer player4;
+    private SchwimmenPlayer player5;
     private Session session1;
     private Session session2;
     private Session session3;
+    private Session session4;
+    private Session session5;
     private TestSocket socket1;
     private TestSocket socket2;
     private TestSocket socket3;
+    private TestSocket socket4;
+    private TestSocket socket5;
     private final String name1 = "Player 1";
     private final String name2 = "Player 2";
     private final String name3 = "Player 3";
+    private final String name4 = "Player 4";
+    private final String name5 = "Player 5";
     private final Gson gson = new Gson();
 
     @Before
@@ -61,31 +72,39 @@ public class SchwimmenGameTest {
         session1 = Mockito.mock(Session.class);
         session2 = Mockito.mock(Session.class);
         session3 = Mockito.mock(Session.class);
+        session4 = Mockito.mock(Session.class);
+        session5 = Mockito.mock(Session.class);
         socket1 = new TestSocket(game, name1, session1);
         socket2 = new TestSocket(game, name2, session2);
         socket3 = new TestSocket(game, name3, session3);
+        socket4 = new TestSocket(game, name4, session4);
+        socket5 = new TestSocket(game, name5, session5);
         player1 = new SchwimmenPlayer(name1, socket1);
         player2 = new SchwimmenPlayer(name2, socket2);
         player3 = new SchwimmenPlayer(name3, socket3);
+        player4 = new SchwimmenPlayer(name4, socket4);
+        player5 = new SchwimmenPlayer(name5, socket5);
         when(session1.isOpen()).thenReturn(Boolean.TRUE);
         when(session2.isOpen()).thenReturn(Boolean.TRUE);
         when(session3.isOpen()).thenReturn(Boolean.TRUE);
+        when(session4.isOpen()).thenReturn(Boolean.TRUE);
+        when(session5.isOpen()).thenReturn(Boolean.TRUE);
     }
 
     @Test
     public void testPlayerComparator() {
-        List <SchwimmenPlayer> playerList = new ArrayList<>();
-        List <SchwimmenPlayer> attendeeList = new ArrayList<>();
+        List<SchwimmenPlayer> playerList = new ArrayList<>();
+        List<SchwimmenPlayer> attendeeList = new ArrayList<>();
         playerList.add(player1);
         playerList.add(player2);
         playerList.add(player3);
         attendeeList.add(player2);
         attendeeList.add(player1);
         attendeeList.add(player3);
-        
+
         // when
         attendeeList.sort(new SchwimmenGame.PlayerIdComparator(playerList));
-        
+
         // then
         assertEquals(player1, attendeeList.get(0));
         assertEquals(player2, attendeeList.get(1));
@@ -599,6 +618,313 @@ public class SchwimmenGameTest {
     }
 
     @Test
+    public void testAskForCardShow_fail_askingPlayerIsNotAttendee() {
+        startWith3Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        int messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardShow\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount, socket2.messageBuff.size());
+    }
+
+    @Test
+    public void testAskForCardShow_fail_targetPlayerDoesntExist() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        int messageCount = socket1.messageBuff.size();
+        socket2.onText("{\"action\": \"askForCardShow\", \"target\": \"random-name\"}");
+        assertEquals(messageCount, socket1.messageBuff.size());
+    }
+
+    @Test
+    public void testAskForCardShow_fail_targetPlayerIsAttendee() {
+        startWith5Players();
+        game.getRound().leavers.add(player2);
+        game.removeAttendee(player1);
+        int messageCount = socket2.messageBuff.size();
+        socket3.onText("{\"action\": \"askForCardShow\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount, socket2.messageBuff.size());
+    }
+
+    @Test
+    public void testAskForCardShow_response_yes() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+
+        // ask
+        int messageCount = socket1.messageBuff.size();
+        socket2.onText("{\"action\": \"askForCardShow\", \"target\": \"Player 1\"}");
+        assertEquals(messageCount + 1, socket1.messageBuff.size());
+        AskForCardShow question = gson.fromJson(socket1.lastMessage(), AskForCardShow.class);
+        assertEquals(name2, question.source);
+
+        // response yes
+        messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardShowResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+        assertEquals(messageCount + 2, socket2.messageBuff.size());
+        ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
+        assertEquals(name2 + " zeigt " + name1 + " die Karten.", chatMessage.text);
+        List<SchwimmenPlayer> viewerList = game.getViewerMap().get(player2);
+        assertEquals(1, viewerList.size());
+        assertEquals(player1, viewerList.get(0));
+    }
+
+    @Test
+    public void testAskForCardShow_response_no() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+
+        // ask
+        int messageCount = socket1.messageBuff.size();
+        socket2.onText("{\"action\": \"askForCardShow\", \"target\": \"Player 1\"}");
+        assertEquals(messageCount + 1, socket1.messageBuff.size());
+        AskForCardView question = gson.fromJson(socket1.lastMessage(), AskForCardView.class);
+        assertEquals(name2, question.source);
+
+        // response no
+        messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardShowResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"false\"}");
+        assertEquals(messageCount + 1, socket2.messageBuff.size());
+        ChatMessage chatMessage = gson.fromJson(socket2.lastMessage(), ChatMessage.class);
+        assertEquals(name1 + " m&ouml;chte die Karten von " + name2 + " nicht sehen.", chatMessage.text);
+    }
+
+    @Test
+    public void testAskForCardShow_fail_targetPlayerIsAlreadyViewer() {
+        startWith5Players();
+        game.getRound().leavers.add(player2);
+        game.removeAttendee(player2);
+        socket1.onText("{\"action\": \"askForCardShow\", \"target\": \"Player 2\"}");
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        socket2.onText("{\"action\": \"askForCardShowResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+
+        int messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardShow\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount, socket2.messageBuff.size());
+    }
+
+    @Test
+    public void testAskForCardShowResponse_fail_noQuestion() {
+        startWith2Players();
+        socket2.onText("{\"action\": \"askForCardShowResponse\", \"value\": \"true\"}");
+        socket2.onText("{\"action\": \"askForCardShowResponse\", \"hashCode\": \"123456\", \"value\": \"true\"}");
+    }
+
+    @Test
+    public void testAskForCardShowResponse_fail_noValue() {
+        startWith5Players();
+        game.getRound().leavers.add(player2);
+        game.removeAttendee(player2);
+        socket1.onText("{\"action\": \"askForCardShow\", \"target\": \"Player 2\"}");
+        AskForCardShow question = gson.fromJson(socket2.lastMessage(), AskForCardShow.class);
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\"}");
+    }
+
+    @Test
+    public void testAskForCardView_fail_askingPlayerIsAttendee() {
+        startWith2Players();
+        int messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount, socket2.messageBuff.size());
+    }
+
+    @Test
+    public void testAskForCardView_fail_targetPlayerDoesntExist() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        int messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"random-name\"}");
+        assertEquals(messageCount, socket2.messageBuff.size());
+    }
+
+    @Test
+    public void testAskForCardView_fail_targetPlayerIsNotAttendee() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.getRound().leavers.add(player2);
+        game.removeAttendee(player1);
+        game.removeAttendee(player2);
+        int messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount, socket2.messageBuff.size());
+    }
+
+    @Test
+    public void testAskForCardView_response_yes() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+
+        // ask
+        int messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount + 1, socket2.messageBuff.size());
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        assertEquals(name1, question.source);
+
+        // response yes
+        messageCount = socket1.messageBuff.size();
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+        assertEquals(messageCount + 3, socket1.messageBuff.size());
+        ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
+        assertEquals(name1 + " schaut bei " + name2 + " in die Karten.", chatMessage.text);
+        List<SchwimmenPlayer> viewerList = game.getViewerMap().get(player2);
+        assertEquals(1, viewerList.size());
+        assertEquals(player1, viewerList.get(0));
+    }
+
+    @Test
+    public void testAskForCardView_response_no() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+
+        // ask
+        int messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount + 1, socket2.messageBuff.size());
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        assertEquals(name1, question.source);
+
+        // response no
+        messageCount = socket1.messageBuff.size();
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"false\"}");
+        assertEquals(messageCount + 1, socket1.messageBuff.size());
+        ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
+        assertEquals(name2 + " l&auml;sst " + name1 + " nicht in die Karten schauen.", chatMessage.text);
+    }
+
+    @Test
+    public void testAskForCardView_fail_askingPlayerIsAlreadyViewer() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+
+        int messageCount = socket2.messageBuff.size();
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount, socket2.messageBuff.size());
+    }
+
+    @Test
+    public void testAskForCardViewResponse_fail_noQuestion() {
+        startWith2Players();
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"value\": \"true\"}");
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"123456\", \"value\": \"true\"}");
+    }
+
+    @Test
+    public void testAskForCardViewResponse_fail_noValue() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\"}");
+    }
+
+    @Test
+    public void testStopCardViewing_fail_invalidPlayer() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+
+        // stop viewing
+        int messageCount = socket1.messageBuff.size();
+        socket1.onText("{\"action\": \"stopCardViewing\", \"target\": \"nobody\"}");
+        assertEquals(messageCount, socket1.messageBuff.size());
+    }
+
+    @Test
+    public void testStopCardViewing_fail_playerNotViewer() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+
+        // stop viewing
+        int messageCount = socket3.messageBuff.size();
+        socket3.onText("{\"action\": \"stopCardViewing\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount, socket3.messageBuff.size());
+    }
+
+    @Test
+    public void testStopCardViewing_success() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+
+        // stop viewing
+        int messageCount = socket1.messageBuff.size();
+        socket1.onText("{\"action\": \"stopCardViewing\", \"target\": \"Player 2\"}");
+        assertEquals(messageCount + 3, socket1.messageBuff.size());
+        ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
+        assertEquals(name1 + " schaut nicht mehr bei " + name2 + " in die Karten.", chatMessage.text);
+    }
+
+    @Test
+    
+    public void testStopCardShowing_fail_invalidPlayer() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+
+        // stop showing
+        int messageCount = socket2.messageBuff.size();
+        socket2.onText("{\"action\": \"stopCardShowing\", \"target\": \"no one\"}");
+        assertEquals(messageCount, socket2.messageBuff.size());
+    }
+
+    @Test
+    public void testStopCardShowing_fail_targetNotViewer() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+
+        // stop showing
+        int messageCount = socket2.messageBuff.size();
+        socket2.onText("{\"action\": \"stopCardShowing\", \"target\": \"Player 3\"}");
+        assertEquals(messageCount, socket2.messageBuff.size());
+    }
+
+    @Test
+    public void testStopCardShowing_success() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+        AskForCardView question = gson.fromJson(socket2.lastMessage(), AskForCardView.class);
+        socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+
+        // stop showing
+        int messageCount = socket2.messageBuff.size();
+        socket2.onText("{\"action\": \"stopCardShowing\", \"target\": \"Player 1\"}");
+        assertEquals(messageCount + 2, socket2.messageBuff.size());
+        ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
+        assertEquals(name2 + " zeigt " + name1 + " die Karten nicht mehr.", chatMessage.text);
+    }
+
+    @Test
     public void testStartStopGame() {
         LOGGER.info("Login the Player");
         login(player1);
@@ -685,6 +1011,15 @@ public class SchwimmenGameTest {
         login(player1);
         login(player2);
         login(player3);
+        game.startGame();
+    }
+
+    private void startWith5Players() {
+        login(player1);
+        login(player2);
+        login(player3);
+        login(player4);
+        login(player5);
         game.startGame();
     }
 

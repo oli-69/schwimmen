@@ -9,6 +9,7 @@ import schwimmen.messages.AttendeeList;
 import schwimmen.messages.GamePhase;
 import schwimmen.messages.PlayerList;
 import schwimmen.messages.PlayerOnline;
+import schwimmen.messages.ViewerMap;
 
 /**
  * This class is a listener to class Game. It listens to change events and
@@ -51,11 +52,11 @@ public class GameChangeListener implements PropertyChangeListener {
                 game.sendToPlayers(gson.toJson(new PlayerOnline(player)));
                 break;
             case SchwimmenGame.PROP_GAMEPHASE:
-                GAMEPHASE phase = (GAMEPHASE) evt.getNewValue();
-                game.sendToPlayers(gson.toJson(getMessageForPhase(phase)));
+                processGamePhase(evt);
                 break;
+            case SchwimmenGame.PROP_VIEWER_MAP:
+                game.sendToPlayers(gson.toJson(new ViewerMap(game.getViewerMap())));
         }
-
     }
 
     private GamePhase getMessageForPhase(GAMEPHASE phase) {
@@ -77,4 +78,20 @@ public class GameChangeListener implements PropertyChangeListener {
     private SchwimmenPlayer getActorForGamePhase(GAMEPHASE phase) {
         return game.getMover();
     }
+
+    private void processGamePhase(PropertyChangeEvent evt) {
+        GAMEPHASE phase = (GAMEPHASE) evt.getNewValue();
+        if (phase == GAMEPHASE.moveResult) {
+            // send an individual message to the clients which include the viewer stacks
+            game.getPlayerList().forEach(p -> {
+                GamePhase message = getMessageForPhase(phase);
+                message.moveResult.viewerStackList = game.getViewerStackList(p);
+                p.getSocket().sendString(gson.toJson(message));
+            });
+
+        } else {
+            game.sendToPlayers(gson.toJson(getMessageForPhase(phase)));
+        }
+    }
+
 }

@@ -3,9 +3,11 @@ var gamePhase;
 var players; // list of all players in the room
 var attendees; // list of players currently in game (still alive)
 var allAttendees; // list of players at start of a game (alive + dead)
+var viewerMap = [0][0];
 var mover;
 var playerStack;
 var gameStack;
+var viewerStacks;
 var changeStackAllowed;
 var knockAllowed;
 var attendeesStackDesks = [];
@@ -13,7 +15,10 @@ var coveredCard = {color: -1, value: -1};
 var coveredStack = [coveredCard, coveredCard, coveredCard];
 var swapSelection = {myStackId: -1, gameStackId: -1};
 var messageInProgress;
+var questionMessageInProgress;
 var webradioStateLoaded = false; // get webradio state only the first time 
+var askForViewerHashCode;
+var playerPopup;
 
 function onDocumentReady() {
     $("#loginConsole").text("Anmeldung vorbereiten...");
@@ -28,7 +33,22 @@ function onDocumentReady() {
     setGameDialogVisible($("#knockDialog"), false);
     setGameDialogVisible($("#passDialog"), false);
     setGameDialogVisible($("#dealerStackSelectedDialog"), false);
+    setGameDialogVisible($("#askForViewCardsDialog"), false);
+    setGameDialogVisible($("#askForShowCardsDialog"), false);
 
+    playerPopup = $("#playerPopupMenu");
+    playerPopup.hide();
+    $(document).click(function (e) {
+        if (playerPopup.is(":visible")) {
+            var target = $(e.target);
+            var isplayerPopUp = target.parents().is(playerPopup) || target.is(playerPopup);
+            if (!isplayerPopUp) {
+                setPlayerPopupVisible(false);
+            }
+        }
+    });
+
+    // connect the enter key to the input fields.
     $('#pName').focus();
     var loginOnEnter = function (e) {
         if (e.keyCode === 13) {
@@ -58,14 +78,28 @@ function onMessageBuffer() {
     }
 }
 
+function onQuestionMessageBuffer() {
+    while (!questionMessageInProgress && questionMessageBuffer.length > 0) {
+        questionMessageInProgress = true;
+        var action = questionMessageBuffer.shift();
+        try {
+            action();
+        } catch (e) {
+            questionMessageInProgress = false;
+        }
+    }
+}
+
 function onGameState(message) {
     gamePhase = message.phase;
     players = message.playerList.players;
     attendees = message.attendeeList.attendees;
     allAttendees = message.attendeeList.allAttendees;
+    viewerMap = message.viewerMap.table;
     mover = message.mover;
     gameStack = message.gameStack.cards;
     playerStack = message.playerStack.cards;
+    viewerStacks = message.viewerStackList.viewerStacks;
     changeStackAllowed = message.changeStackAllowed;
     knockAllowed = message.knockAllowed;
     updatePlayerList();
@@ -98,6 +132,30 @@ function onPlayerStack(message) {
     messageInProgress = false;
     playerStack = message.cards;
     logStack("Player Stack", playerStack);
+}
+
+function onAskForCardView(message) {
+    askForViewerHashCode = message.hashCode;
+    var msg = message.source + " m&ouml;chte bei Dir in die Karten schauen.";
+    $("#askForViewCardsMessage").html(msg);
+    sound.askview.play();
+    setGameDialogVisible($("#askForViewCardsDialog"), true);
+    log("ASKED");
+}
+
+function onAskForCardShow(message) {
+    askForViewerHashCode = message.hashCode;
+    var msg = message.source + " m&ouml;chte Dir die Karten zeigen.";
+    $("#askForShowCardsMessage").html(msg);
+    sound.askview.play();
+    setGameDialogVisible($("#askForShowCardsDialog"), true);
+}
+
+function onViewerMap(message) {
+    messageInProgress = false;
+    viewerMap = message.table;
+    updateAttendeeList();
+    updateAttendeeStacks();
 }
 
 function onGamePhaseMessage(message) {
@@ -145,6 +203,9 @@ function onGamePhase(phase) {
     setGameDialogVisible($("#discoverDialog"), isDiscover);
     initDialogButtons();
 
+    // reset all card selections and hovers
+    resetUICards();
+
     // Game Area
     if (isWaitForAttendees || phase === "shuffle") {
         emptyAllStackDesks();
@@ -154,7 +215,6 @@ function onGamePhase(phase) {
     updateCardStack($("#gameStack"), gameStack);
     updateCardStack(attendeesStackDesks[getMyAllAttendeeId()], playerStack);
     updateAttendeeDeskColor();
-    clearCardSelection();
 
     // Control Panel
     $("#logoffBtn").prop("disabled", !(isWaitForAttendees && isActive));
@@ -262,6 +322,7 @@ function onMoveResult(result) {
     if (result !== undefined) {
         var readyFunction = function () {
             gameStack = result.gameStack.cards;
+            viewerStacks = result.viewerStackList.viewerStacks;
             log("'" + mover + "': " + result.move);
             logStack("Game Stack", gameStack);
             logStack("Player Stack", playerStack);
@@ -271,7 +332,7 @@ function onMoveResult(result) {
         switch (result.move) {
             case "selectStack":
                 if (result.stackAction === 'keep') {
-                    $("#stackSelectMessage").html((mover === myName ? "Du beh&auml;lst" : mover + " beh&auml;lt") + " die Karten");
+                    $("#stackSelectMessage").html((mover === myName ? "Du beh&auml;ltst" : mover + " beh&auml;lt") + " die Karten");
                 } else {
                     $("#stackSelectMessage").html((mover === myName ? "Du wechselst" : mover + " wechselt") + " die Karten");
                 }
@@ -525,8 +586,113 @@ function updatePlayerList() {
     var panel = $("#playerListPanel");
     panel.empty();
     players.forEach(function (player) {
-        panel.append("<div class='" + (player.online ? "playerOnline" : "playerOffline") + "'>" + player.name + '<br>&euro; ' + (0.5 * player.totalTokens).toFixed(2) + "</div>");
+        var className = player.online ? "playerOnline" : "playerOffline";
+        var tokens = (0.5 * player.totalTokens).toFixed(2);
+        var name = $("<span class='playerPopupEnabled'>" + player.name + "</span>");
+        var container = $("<div class='" + className + "'></div>");
+        container.append(name);
+        container.append("<br>&euro; " + tokens);
+        panel.append(container);
+        name.click(createPlayerClickFunction(player));
     });
+}
+
+function showPlayerPopup(evt, player) {
+    setTimeout(function () { // asynchron because the document handler will fire a close event
+        $("#playerPopupMenuTitle").html(player.name);
+        var meIsAttendee = isAttendee();
+        var targetIsAttendee = getAttendeeIdByName(player.name) >= 0;
+        var targetIsMe = player.name === myName;
+        var enabled = "playerPopupMenuItem";
+        var disabled = "playerPopupMenuItemDisabled";
+        var miAskForCardView = $("#miAskForViewCards");
+        var miAskForCardShow = $("#miAskForShowCards");
+        var miStopCardViewing = $("#miStopViewCards");
+        var miStopCardShowing = $("#miStopShowCards");
+        miAskForCardView.hide();
+        miAskForCardShow.hide();
+        miStopCardViewing.hide();
+        miStopCardShowing.hide();
+        miAskForCardView.off("click");
+        miAskForCardShow.off("click");
+        miStopCardViewing.off("click");
+        miStopCardShowing.off("click");
+        if (meIsAttendee) {
+            miAskForCardShow.show();
+            miStopCardShowing.show();
+            var isMyViewer = isViewerOf(player.name, myName);
+            var askEnabled = !(targetIsAttendee || targetIsMe || isMyViewer || !player.online);
+            var stopEnabled = !(targetIsAttendee || targetIsMe || !isMyViewer);
+            miAskForCardShow.prop("class", askEnabled ? enabled : disabled);
+            miStopCardShowing.prop("class", stopEnabled ? enabled : disabled);
+            if (askEnabled) {
+                miAskForCardShow.click(function () {
+                    askForCardShow(player.name);
+                    setPlayerPopupVisible(false);
+                });
+            }
+            if (stopEnabled) {
+                miStopCardShowing.click(function () {
+                    stopCardShowing(player.name);
+                    setPlayerPopupVisible(false);
+                });
+            }
+        } else {
+            miAskForCardView.show();
+            miStopCardViewing.show();
+            var meIsViewer = isViewerOf(myName, player.name);
+            var askEnabled = targetIsAttendee && !targetIsMe && !meIsViewer && player.online;
+            var stopEnabled = targetIsAttendee && !targetIsMe && meIsViewer;
+            miAskForCardView.prop("class", askEnabled ? enabled : disabled);
+            miStopCardViewing.prop("class", stopEnabled ? enabled : disabled);
+            if (askEnabled) {
+                miAskForCardView.click(function () {
+                    askForCardView(player.name);
+                    setPlayerPopupVisible(false);
+                });
+            }
+            if (stopEnabled) {
+                miStopCardViewing.click(function () {
+                    stopCardViewing(player.name);
+                    setPlayerPopupVisible(false);
+                });
+            }
+        }
+        var popup = $("#playerPopupMenu");
+        popup.css("top", evt.pageY);
+        popup.css("left", evt.pageX);
+        popup.fadeIn("fast");
+    });
+}
+
+function isViewerOf(viewer, shower) {
+    var list = getViewerList(shower);
+    if (list !== undefined) {
+        for (i = 1; i < list.length; i++) {
+            if (list[i] === viewer) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function getViewerList(name) {
+    if (viewerMap !== undefined) {
+        for (i = 0; i < viewerMap.length; i++) {
+            var list = viewerMap[i];
+            if (list !== undefined && list[0] === name) {
+                return list;
+            }
+        }
+    }
+    return undefined;
+}
+
+function createPlayerClickFunction(player) {
+    return function (evt) {
+        showPlayerPopup(evt, player);
+    }
 }
 
 function updateAttendeeList() {
@@ -542,19 +708,40 @@ function updateAttendeeList() {
         var id = myId;
         for (var i = 0; i < numPl; i++) {
             id = getNextAllAttendeeId(id);
-            var name = players[ allAttendees[id] ].name;
-            var attendeeId = getAttendeeIdByName(name)
+            var player = players[ allAttendees[id] ];
+            var name = player.name;
+            var attendeeId = getAttendeeIdByName(name);
             var token = attendeeId >= 0 ? attendees[attendeeId].gameTokens : -1;
             var child = $("<div class='attendeeDesk'></div>");
             var cardDesk = $("<div class='cardStack'></div>");
-            child.append(cardDesk).append($("<div class='attendeeNameContainer'><div class='attendeeName'>" + name + "</div><div class='tokenImage" + token + "'></div></div>"));
+            var nameContainer = $("<div class='attendeeNameContainer'></div>");
+            var nameDiv = $("<div class='attendeeName'></div>");
+            var nameSpan = $("<span class='playerPopupEnabled'>" + name + "</span>");
+            var p = player;
+            nameSpan.click(createPlayerClickFunction(player));
+            nameDiv.append(nameSpan);
+            var viewerList = getViewerList(name);
+            if (viewerList !== undefined && viewerList.length > 1) { // first entry is the own name
+                var viewerDiv = $("<div class='cardViewerName'></div>");
+                var viewerHtml = viewerList[1];
+                for (var n = 2; n < viewerList.length; n++) {
+                    viewerHtml += ("<br>" + viewerList[n]);
+                }
+                viewerDiv.html(viewerHtml);
+                nameDiv.append($("<br>")).append(viewerDiv);
+            }
+            nameContainer.append(nameDiv);
+            nameContainer.append($("<div class='tokenImage" + token + "'></div>"));
+//            child.append(cardDesk).append($("<div class='attendeeNameContainer'><div class='attendeeName'>" + name + "<br><div class='cardViewerName'>testName<br>testName2</div></div><div class='tokenImage" + token + "'></div></div>"));
+            child.append(cardDesk).append(nameContainer);
             attendeesStackDesks[id] = cardDesk;
             panel.append(child);
             var isSmallSize = panel.width() < 720;
             var rx = panel.width() * (!isSmallSize ? 0.3 : 0.25);
             var ry = panel.height() * 0.25;
             var l = (panel.width() >> 1) + rx * Math.cos(angle) - (child.outerWidth() >> 1);
-            var t = ((panel.height() >> 1) + ry * Math.sin(angle) - (child.outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.5 : 1)));
+//            var t = ((panel.height() >> 1) + ry * Math.sin(angle) - (child.outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.5 : 1)));
+            var t = ((panel.height() >> 1) + ry * Math.sin(angle) - (1.45 * cardDesk.outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.5 : 1)));
             l = (100 / panel.width() * l) + "%";
             t = (100 / panel.height() * t) + "%";
             child.css({left: l, top: t});
@@ -568,6 +755,13 @@ function updateAttendeeList() {
             $("#addToAttendeesBtn").hide();
             $("#removeFromAttendeesBtn").show();
         }
+    }
+}
+
+function getClickFunction(player) {
+    return function (evt) {
+        log("Hello: " + player.name);
+        showPlayerPopup(evt, player);
     }
 }
 
@@ -608,11 +802,13 @@ function updateAttendeeStacks(message) {
     for (var i = 0; i < allAttendees.length; i++) {
         var desk = attendeesStackDesks[i];
         if (desk !== myDesk) {
-            attendeeId = getAttendeeIdByName(players[allAttendees[i]].name);
+            var attendeeName = players[allAttendees[i]].name;
+            attendeeId = getAttendeeIdByName(attendeeName);
             if (discoverStacks !== undefined) {
                 updateCardStack(desk, (attendeeId >= 0) ? discoverStacks[ i ].cards : undefined);
             } else {
-                updateCardStack(desk, (attendeeId >= 0) ? coveredStack : undefined);
+                var viewerStack = getViewerStack(attendeeName);
+                updateCardStack(desk, (attendeeId >= 0) ? (viewerStack !== undefined ? viewerStack : coveredStack) : undefined);
             }
         } else {
             updateCardStack(desk, playerStack);
@@ -635,6 +831,21 @@ function updateCardStack(desk, cards) {
                 desk.append(cardWrapper);
             }
         }
+    }
+}
+
+function getViewerStack(name) {
+    for (var i = 0; i < viewerStacks.length; i++) {
+        if (viewerStacks[i].name === name) {
+            return viewerStacks[i].cards;
+        }
+    }
+    return undefined;
+}
+
+function processCardHover(uiCard, isHover) {
+    if (gamePhase === "waitForPlayerMove" && mover === myName) {
+        uiCard.setHover(isHover);
     }
 }
 
@@ -665,24 +876,6 @@ function processCardClick(uiCard) {
         log(swapSelection);
     }
 }
-
-function clearCardSelection() {
-    if (playerStack !== undefined) {
-        var playerCard = getSvgCard(playerStack[swapSelection.myStackId]);
-        if (playerCard !== undefined) {
-            playerCard.setSelected(false);
-        }
-    }
-    if (gameStack !== undefined) {
-        var gameCard = getSvgCard(gameStack[swapSelection.gameStackId]);
-        if (gameCard !== undefined) {
-            gameCard.setSelected(false);
-        }
-    }
-    swapSelection.myStackId = -1;
-    swapSelection.gameStackId = -1;
-}
-
 
 function findStackId(uiCard, stack) {
     if (stack !== undefined) {
@@ -736,6 +929,13 @@ function setGameDialogVisible(dialog, visible) {
     }
 }
 
+function setPlayerPopupVisible(visible) {
+    if (visible) {
+        playerPopup.fadeIn("fast");
+    } else {
+        playerPopup.fadeOut("fast");
+    }
+}
 function startGame() {
     var msg = {"action": "startGame"};
     webSocket.send(JSON.stringify(msg));
@@ -778,7 +978,9 @@ function changeDealerStack() {
 
 function swapCard() {
     var msg = {"action": "swapCard", "playerStack": swapSelection.myStackId, "gameStack": swapSelection.gameStackId};
-    clearCardSelection();
+    resetUICards();
+    swapSelection.myStackId = -1;
+    swapSelection.gameStackId = -1;
     webSocket.send(JSON.stringify(msg));
 }
 
@@ -807,4 +1009,40 @@ function sendChatMessage() {
     var msg = {"action": "chat", "text": msgField.val()};
     webSocket.send(JSON.stringify(msg));
     msgField.val("");
+}
+
+function askForCardView(target) {
+    var msg = {"action": "askForCardView", "target": target};
+    webSocket.send(JSON.stringify(msg));
+}
+
+function stopCardViewing(target) {
+    var msg = {"action": "stopCardViewing", "target": target};
+    webSocket.send(JSON.stringify(msg));
+}
+
+function askForCardShow(target) {
+    var msg = {"action": "askForCardShow", "target": target};
+    webSocket.send(JSON.stringify(msg));
+}
+
+function stopCardShowing(target) {
+    var msg = {"action": "stopCardShowing", "target": target};
+    webSocket.send(JSON.stringify(msg));
+}
+
+function viewCardsResponse(allowed) {
+    var msg = {"action": "askForCardViewResponse", "hashCode": askForViewerHashCode, "value": allowed};
+    webSocket.send(JSON.stringify(msg));
+    setGameDialogVisible($("#askForViewCardsDialog"), false);
+    questionMessageInProgress = false;
+    onQuestionMessageBuffer();
+}
+
+function showCardsResponse(allowed) {
+    var msg = {"action": "askForCardShowResponse", "hashCode": askForViewerHashCode, "value": allowed};
+    webSocket.send(JSON.stringify(msg));
+    setGameDialogVisible($("#askForShowCardsDialog"), false);
+    questionMessageInProgress = false;
+    onQuestionMessageBuffer();
 }
