@@ -732,7 +732,6 @@ function updateAttendeeList() {
             }
             nameContainer.append(nameDiv);
             nameContainer.append($("<div class='tokenImage" + token + "'></div>"));
-//            child.append(cardDesk).append($("<div class='attendeeNameContainer'><div class='attendeeName'>" + name + "<br><div class='cardViewerName'>testName<br>testName2</div></div><div class='tokenImage" + token + "'></div></div>"));
             child.append(cardDesk).append(nameContainer);
             attendeesStackDesks[id] = cardDesk;
             panel.append(child);
@@ -740,7 +739,6 @@ function updateAttendeeList() {
             var rx = panel.width() * (!isSmallSize ? 0.3 : 0.25);
             var ry = panel.height() * 0.25;
             var l = (panel.width() >> 1) + rx * Math.cos(angle) - (child.outerWidth() >> 1);
-//            var t = ((panel.height() >> 1) + ry * Math.sin(angle) - (child.outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.5 : 1)));
             var t = ((panel.height() >> 1) + ry * Math.sin(angle) - (1.45 * cardDesk.outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.5 : 1)));
             l = (100 / panel.width() * l) + "%";
             t = (100 / panel.height() * t) + "%";
