@@ -767,9 +767,8 @@ function getClickFunction(player) {
 
 function updateAttendeeDeskColor() {
     if (attendees !== undefined) {
-        var myId = getMyAllAttendeeId();
         var numPl = allAttendees.length;
-        var id = myId;
+        var id = getMyAllAttendeeId();
         for (var i = 0; i < numPl; i++) {
             id = getNextAllAttendeeId(id);
             var attendee = players[allAttendees[id]];
@@ -789,48 +788,54 @@ function emptyAllStackDesks() {
 }
 
 function updateAttendeeStacks(message) {
-    var discoverStacks = undefined;
-    if (message !== undefined && gamePhase === "discover") {
-        if (message.action === "gameState") {
-            discoverStacks = message.discoverStacks;
-        } else if (message.action === "gamePhase") {
-            discoverStacks = message.discoverMessage.playerStacks;
+    try {
+        var discoverStacks = undefined;
+        if (message !== undefined && gamePhase === "discover") {
+            discoverStacks = (message.action === "gameState") ? message.discoverStacks : message.discoverMessage.playerStacks;
         }
-    }
-    var myAllAttendeeId = getMyAllAttendeeId();
-    var myDesk = myAllAttendeeId >= 0 ? attendeesStackDesks[myAllAttendeeId] : undefined;
-    for (var i = 0; i < allAttendees.length; i++) {
-        var desk = attendeesStackDesks[i];
-        if (desk !== myDesk) {
-            var attendeeName = players[allAttendees[i]].name;
-            attendeeId = getAttendeeIdByName(attendeeName);
-            if (discoverStacks !== undefined) {
-                updateCardStack(desk, (attendeeId >= 0) ? discoverStacks[ i ].cards : undefined);
+        var id = getMyAllAttendeeId();
+        var deskId = getMyAllAttendeeId();
+        var myDesk = deskId >= 0 ? attendeesStackDesks[deskId] : undefined;
+        for (var i = 0; i < allAttendees.length; i++) {
+            id = getNextAllAttendeeId(id);
+            var desk = attendeesStackDesks[id];
+            if (desk !== myDesk) {
+                var playerName = players[allAttendees[id]].name;
+                var isAttendee = getAttendeeIdByName(playerName) >= 0;
+                if (discoverStacks !== undefined) {
+                    updateCardStack(desk, isAttendee ? discoverStacks[getAttendeeIdByName(playerName)].cards : undefined);
+                } else {
+                    var viewerStack = getViewerStack(playerName);
+                    updateCardStack(desk, isAttendee ? (viewerStack !== undefined ? viewerStack : coveredStack) : undefined);
+                }
             } else {
-                var viewerStack = getViewerStack(attendeeName);
-                updateCardStack(desk, (attendeeId >= 0) ? (viewerStack !== undefined ? viewerStack : coveredStack) : undefined);
+                updateCardStack(desk, playerStack);
             }
-        } else {
-            updateCardStack(desk, playerStack);
         }
+    } catch (e) {
+        log("Fehler in updateAttendeeStacks(): '" + e + "'");
     }
 }
 
 function updateCardStack(desk, cards) {
-    if (desk !== undefined) {
-        desk.empty();
-        if (cards !== undefined && cards.length > 0) {
-            var isCovered = (cards === coveredStack);
-            for (var i = 0; i < cards.length; i++) {
-                var svg = (isCovered) ? getSvgCard(cards[i]).getUI().clone() : getSvgCard(cards[i]).getUI();
-                $(svg).css("position", "static");
-                $(svg).css("top", "");
-                $(svg).css("left", "");
-                var cardWrapper = $("<div class='cardWrapper'></div>");
-                cardWrapper.append(svg);
-                desk.append(cardWrapper);
+    try {
+        if (desk !== undefined) {
+            desk.empty();
+            if (cards !== undefined && cards.length > 0) {
+                var isCovered = (cards === coveredStack);
+                for (var i = 0; i < cards.length; i++) {
+                    var svg = (isCovered) ? getSvgCard(cards[i]).getUI().clone() : getSvgCard(cards[i]).getUI();
+                    $(svg).css("position", "static");
+                    $(svg).css("top", "");
+                    $(svg).css("left", "");
+                    var cardWrapper = $("<div class='cardWrapper'></div>");
+                    cardWrapper.append(svg);
+                    desk.append(cardWrapper);
+                }
             }
         }
+    } catch (e) {
+        log("Fehler in updateAttendeeStacks(): '" + e + "'");
     }
 }
 
