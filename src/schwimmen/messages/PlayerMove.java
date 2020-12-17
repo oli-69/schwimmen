@@ -1,6 +1,5 @@
 package schwimmen.messages;
 
-import java.util.List;
 import schwimmen.SchwimmenGame.MOVE;
 
 public class PlayerMove {
@@ -8,33 +7,33 @@ public class PlayerMove {
     public String move;
     public CardSwap cardSwap;
     public StackSwap stackSwap;
-    public CardStack gameStack;
+    public GameStack gameStack;
     public int count;
     public String stackAction;
     public ViewerStackList viewerStackList;
 
-    public PlayerMove(MOVE move, List<cardgame.Card> gameStack) {
+    public PlayerMove(MOVE move, GameStack gameStack) {
         this.move = move.name();
-        this.gameStack = new CardStack(gameStack);
+        this.gameStack = gameStack;
     }
 
-    public PlayerMove(MOVE move, List<cardgame.Card> gameStack, String stackAction) {
+    public PlayerMove(MOVE move, GameStack gameStack, String stackAction) {
         this(move, gameStack);
-        this.gameStack = new CardStack(gameStack);
+        this.gameStack = gameStack;
         this.stackAction = stackAction;
     }
 
-    public PlayerMove(MOVE move, int count, List<cardgame.Card> gameStack) {
+    public PlayerMove(MOVE move, int count, GameStack gameStack) {
         this(move, gameStack);
         this.count = count;
     }
 
-    public PlayerMove(CardSwap cardSwap, List<cardgame.Card> gameStack) {
+    public PlayerMove(CardSwap cardSwap, GameStack gameStack) {
         this(MOVE.swapCard, gameStack);
         this.cardSwap = cardSwap;
     }
 
-    public PlayerMove(StackSwap stackSwap, List<cardgame.Card> gameStack) {
+    public PlayerMove(StackSwap stackSwap, GameStack gameStack) {
         this(MOVE.swapAllCards, gameStack);
         this.stackSwap = stackSwap;
     }

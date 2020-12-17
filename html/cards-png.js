@@ -166,7 +166,7 @@ var UICard = function (color, value, fetchFunction) {
 
 UICard.prototype.getUI = function () {
     return this.ui;
-}
+};
 
 UICard.prototype.setSelected = function (selected) {
     this.selected = selected;
@@ -175,13 +175,13 @@ UICard.prototype.setSelected = function (selected) {
 };
 
 UICard.prototype.setHover = function (isHover) {
+    var cursor = isHover ? "pointer" : "auto";
+    this.ui.css("cursor", cursor);
     if (!this.selected) {
         var imgOpacity = isHover ? "0.875" : "1";
-        var bgColor = isHover ? "#FFAA00" : "rgba(0,0,0,0)";
-        var cursor = isHover ? "pointer" : "auto";
+        var bgColor = isHover ? "#0000FF" : "rgba(0,0,0,0)";
         this.img.css("opacity", imgOpacity);
         this.ui.css("background-color", bgColor);
-        this.ui.css("cursor", cursor);
     }
 };
 

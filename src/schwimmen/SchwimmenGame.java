@@ -118,6 +118,7 @@ public class SchwimmenGame extends CardGame {
     private final PropertyChangeListener playerListener;
     private final List<Card> gameStack; // Stock in the middle of the game, visible to all players.
     private final List<Card> dealerStack; // 2nd stack while dealing cards.
+    private final GameStackProperties gameStackProperties;
     private final Gson gson;
     private final Round round;
     private final List<Integer> finishSoundIds;
@@ -166,6 +167,7 @@ public class SchwimmenGame extends CardGame {
         askForShowMap = new HashMap<>();
         this.gameStack = gameStack;
         this.dealerStack = Collections.synchronizedList(new ArrayList<>());
+        this.gameStackProperties = new GameStackProperties(gameStack);
         playerListener = this::playerPropertyChanged;
         round = new Round(this);
         gson = new Gson();
@@ -320,7 +322,7 @@ public class SchwimmenGame extends CardGame {
             }
         }
         return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
-                gameStack, player.getStack(), getViewerStackList(player), isChangeStackAllowed(player), isKnockAllowed(),
+                gameStackProperties.getGameStack(), player.getStack(), getViewerStackList(player), isChangeStackAllowed(player), isKnockAllowed(),
                 discoverStacks, webradioPlaying);
     }
 
@@ -641,6 +643,9 @@ public class SchwimmenGame extends CardGame {
     private void setGamePhase(GAMEPHASE phase) {
         LOGGER.info("GamePhase: '" + phase + "'");
         this.gamePhase = phase;
+        if( phase == GAMEPHASE.shuffle) {
+            gameStackProperties.shakeAll();
+        }
         firePropertyChange(PROP_GAMEPHASE, null, phase);
     }
 
@@ -683,7 +688,7 @@ public class SchwimmenGame extends CardGame {
             mover = getNextTo(mover);
         }
         discoverMessage = new DiscoverMessage(round.finisher, round.finishScore,
-                round.knocker2, playerStacks, gameStack, payers, leavers, getNextFinishSoundId());
+                round.knocker2, playerStacks, payers, leavers, getNextFinishSoundId());
         setGamePhase(GAMEPHASE.discover);
     }
 
@@ -772,14 +777,14 @@ public class SchwimmenGame extends CardGame {
                             players.forEach(p -> p.reset());
                             players.forEach(p -> p.getSocket().sendString(gson.toJson(
                                     new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
-                                            gameStack, new ArrayList<>(), new ViewerStackList(), false, false, null, webradioPlaying))));
+                                            gameStackProperties.getGameStack(), new ArrayList<>(), new ViewerStackList(), false, false, null, webradioPlaying))));
                             setGamePhase(GAMEPHASE.waitForAttendees);
                         } else {
                             players.forEach(p -> {
                                 p.getStack().clear();
                                 p.getSocket().sendString(gson.toJson(
                                         new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
-                                                gameStack, new ArrayList<>(), new ViewerStackList(), false, false, null, webradioPlaying)));
+                                                gameStackProperties.getGameStack(), new ArrayList<>(), new ViewerStackList(), false, false, null, webradioPlaying)));
                             }
                             );
                             setGamePhase(GAMEPHASE.shuffle);
@@ -888,7 +893,7 @@ public class SchwimmenGame extends CardGame {
                         LOGGER.error("Unkonwn action for selectDealerStack: '" + action + "'");
                 }
                 player.getSocket().sendString(gson.toJson(new PlayerStack(player.getStack())));
-                setPlayerMove(new PlayerMove(MOVE.selectStack, gameStack, action));
+                setPlayerMove(new PlayerMove(MOVE.selectStack, gameStackProperties.getGameStack(), action));
                 stepGamePhase();
             } else {
                 LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.dealCards));
@@ -909,8 +914,9 @@ public class SchwimmenGame extends CardGame {
                     Card cardGiven = playerStack.get(playerStackId);
                     playerStack.set(playerStackId, cardTaken);
                     gameStack.set(gameStackId, cardGiven);
+                    gameStackProperties.shake(gameStackId);
                     player.getSocket().sendString(gson.toJson(new PlayerStack(playerStack)));
-                    setPlayerMove(new PlayerMove(new CardSwap(cardGiven, cardTaken, playerStackId, gameStackId), gameStack));
+                    setPlayerMove(new PlayerMove(new CardSwap(cardGiven, cardTaken, playerStackId, gameStackId), gameStackProperties.getGameStack()));
                     stepGamePhase();
                 } catch (Exception e) {
                     LOGGER.error("Spieler '" + player.getName() + "' " + " Karten IDs ungueltig!");
@@ -934,9 +940,10 @@ public class SchwimmenGame extends CardGame {
                 gameStack.clear();
                 playerStack.clear();
                 gameStack.addAll(stackGiven);
+                gameStackProperties.shakeAll();
                 playerStack.addAll(stackTaken);
                 player.getSocket().sendString(gson.toJson(new PlayerStack(playerStack)));
-                setPlayerMove(new PlayerMove(new StackSwap(stackGiven, stackTaken), gameStack));
+                setPlayerMove(new PlayerMove(new StackSwap(stackGiven, stackTaken), gameStackProperties.getGameStack()));
                 stepGamePhase();
             } else {
                 LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForPlayerMove));
@@ -950,7 +957,7 @@ public class SchwimmenGame extends CardGame {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.waitForPlayerMove) {
                 round.pass(player);
-                setPlayerMove(new PlayerMove(MOVE.pass, round.getPassCount(), gameStack));
+                setPlayerMove(new PlayerMove(MOVE.pass, round.getPassCount(), gameStackProperties.getGameStack()));
                 stepGamePhase();
             } else {
                 LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForPlayerMove));
@@ -965,7 +972,7 @@ public class SchwimmenGame extends CardGame {
             if (gamePhase == GAMEPHASE.waitForPlayerMove) {
                 if (isKnockAllowed()) {
                     round.knock(player);
-                    setPlayerMove(new PlayerMove(MOVE.knock, round.getKnockCount(), gameStack));
+                    setPlayerMove(new PlayerMove(MOVE.knock, round.getKnockCount(), gameStackProperties.getGameStack()));
                     stepGamePhase();
                 } else {
                     LOGGER.warn("Spieler '" + player.getName() + "' " + " darf nicht klopfen!");
@@ -987,10 +994,11 @@ public class SchwimmenGame extends CardGame {
                         for (int i = 0; i < 3; i++) {
                             gameStack.add(getFromStack());
                         }
+                        gameStackProperties.shakeAll();
                     } else {
                         LOGGER.info("Es sind zu wenig Karten verfuegbar um zu tauschen.");
                     }
-                    setPlayerMove(new PlayerMove(MOVE.changeStack, gameStack));
+                    setPlayerMove(new PlayerMove(MOVE.changeStack, gameStackProperties.getGameStack()));
                     stepGamePhase(false);
                 } else {
                     LOGGER.warn("Spieler '" + player.getName() + "' " + " darf den Stapel nicht austauschen!");

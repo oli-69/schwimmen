@@ -7,6 +7,10 @@ var viewerMap = [0][0];
 var mover;
 var playerStack;
 var gameStack;
+var gameStackOffsets = [];
+var gameStackRotations = [];
+var cardFlips = [3];
+var gameDesk;
 var viewerStacks;
 var changeStackAllowed;
 var knockAllowed;
@@ -26,6 +30,7 @@ function onDocumentReady() {
         $("#connectBtn").prop("disabled", false);
         $("#loginConsole").html("&nbsp;");
     });
+    gameDesk = $("#gameDesk");
     setGameDialogVisible($("#joinInOutDialog"), false);
     setGameDialogVisible($("#dealCardsDialog"), false);
     setGameDialogVisible($("#selectDealerStackDialog"), false);
@@ -62,6 +67,16 @@ function onDocumentReady() {
             sendChatMessage();
         }
     });
+
+    var layoutFunction = function () {
+        updateAttendeeList();
+        updateAttendeeStacks();
+        updateCardStack($("#gameStack"), gameStack);
+    };
+    $(window).on("orientationchange", function () {
+        setTimeout(layoutFunction(), 1000);
+    });
+    $(window).resize(layoutFunction);
 }
 
 function onMessageBuffer() {
@@ -98,6 +113,8 @@ function onGameState(message) {
     viewerMap = message.viewerMap.table;
     mover = message.mover;
     gameStack = message.gameStack.cards;
+    gameStackOffsets = message.gameStack.offset;
+    gameStackRotations = message.gameStack.rotation;
     playerStack = message.playerStack.cards;
     viewerStacks = message.viewerStackList.viewerStacks;
     changeStackAllowed = message.changeStackAllowed;
@@ -140,7 +157,6 @@ function onAskForCardView(message) {
     $("#askForViewCardsMessage").html(msg);
     sound.askview.play();
     setGameDialogVisible($("#askForViewCardsDialog"), true);
-    log("ASKED");
 }
 
 function onAskForCardShow(message) {
@@ -320,13 +336,20 @@ function onDiscover(gamePhaseMessage) {
 
 function onMoveResult(result) {
     if (result !== undefined) {
+        gameStackOffsets = result.gameStack.offset;
+        gameStackRotations = result.gameStack.rotation;
+        cardFlips = result.gameStack.cardFlips;
         var readyFunction = function () {
-            gameStack = result.gameStack.cards;
-            viewerStacks = result.viewerStackList.viewerStacks;
-            log("'" + mover + "': " + result.move);
-            logStack("Game Stack", gameStack);
-            logStack("Player Stack", playerStack);
-            onGamePhase(gamePhase);
+            try {
+                gameStack = result.gameStack.cards;
+                viewerStacks = result.viewerStackList.viewerStacks;
+                log("'" + mover + "': " + result.move);
+                logStack("Game Stack", gameStack);
+                logStack("Player Stack", playerStack);
+                onGamePhase(gamePhase);
+            } catch (e) {
+                log("Exception in onMoveResult::readyFunction: '" + e + "'");
+            }
             onMessageBuffer();
         };
         switch (result.move) {
@@ -381,6 +404,7 @@ function onMoveResult(result) {
     }
 }
 
+/* New Cards */
 function animateStackChange(readyFunction) {
     var speed = 2500;
     $("#swapCardBtn").prop("disabled", true);
@@ -388,19 +412,16 @@ function animateStackChange(readyFunction) {
     $("#passBtn").prop("disabled", true);
     $("#knockBtn").prop("disabled", true);
     $("#newCardsBtn").prop("disabled", true);
-    var svg1 = $($($("#gameStack").children()[0]).children(0));
-    var svg2 = $($($("#gameStack").children()[1]).children(0));
-    var svg3 = $($($("#gameStack").children()[2]).children(0));
-    svg1.css("position", "absolute");
-    svg2.css("position", "absolute");
-    svg3.css("position", "absolute");
-    var offX = $($($("#gameStack").children()[0]).children(0)).offset().left * 2.5;
+    var svg1 = $($($("#gameStack").children()[0]));
+    var svg2 = $($($("#gameStack").children()[1]));
+    var svg3 = $($($("#gameStack").children()[2]));
+    var cardStack = $("#gameStack");
+    var offX = cardStack.offset().left + cardStack.width() + 25;
+    sound.newcards.play();
     svg1.animate({left: "-=" + offX}, speed);
     svg2.animate({left: "-=" + offX}, speed);
-    sound.newcards.play();
     svg3.animate({left: "-=" + offX}, speed, function () {
         if (typeof readyFunction === "function") {
-            log("ANIMATE STACK CHANGE BEENDET");
             readyFunction();
         }
     });
@@ -414,29 +435,60 @@ function animateCardSwap(takenId, givenId, readyFunction) {
     $("#passBtn").prop("disabled", true);
     $("#knockBtn").prop("disabled", true);
     $("#newCardsBtn").prop("disabled", true);
-    var gameDeskWrapper = $($("#gameStack").children()[takenId]);
-    var tSvg = $(gameDeskWrapper.children(0));
-    var tPos = tSvg.offset();
     var attendeeDesk = attendeesStackDesks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
-    var attendeeDeskWrapper = $(attendeeDesk.children()[givenId]);
-    var gSvg = $(attendeeDeskWrapper.children(0));
-    var gPos = gSvg.offset();
-    var offX = gPos.left - tPos.left;
-    var offY = gPos.top - tPos.top;
-    gSvg.css("position", "absolute");
-    tSvg.css("position", "absolute");
-    sound.click.play();
-    tSvg.animate({top: "+=" + offY, left: "+=" + offX}, outSpeed, function () {
-        gameDeskWrapper.append(gSvg);
-        gSvg.animate({top: "+=" + offY, left: "+=" + offX}, 0, function () {
-            gSvg.animate({top: "-=" + offY, left: "-=" + offX}, inSpeed, function () {
-                if (typeof readyFunction === "function") {
-                    sound.swap.play();
-                    readyFunction();
+    var tSvg = $($("#gameStack").children()[takenId]);
+    var gSvg = $(attendeeDesk.children()[givenId]);
+    var tProps = {top: tSvg.css("top"), left: tSvg.css("left"), rot: getRotationDegrees(tSvg)};
+    var gProps = {top: gSvg.css("top"), left: gSvg.css("left"), rot: getRotationDegrees(gSvg)};
+    tSvg.prop("rot", tProps.rot); // animate a pseudo property
+    gSvg.prop("rot", gProps.rot);
+    var finish = function () {
+        if (typeof readyFunction === "function") {
+            sound.swap.play();
+            readyFunction();
+        }
+    };
+    var reverse = function () {
+        var targetProps = getGameStackProperties(takenId, tSvg, $("#gameStack"));
+        var targetRot = targetProps.r;
+        targetRot += cardFlips[takenId] * 360;
+        gSvg.animate({top: targetProps.y, left: targetProps.x, rot: targetRot}, {
+            duration: inSpeed,
+            step: function (now, tween) {
+                if (tween.prop === "rot") {
+                    gSvg.css("transform", "rotate(" + now + "deg)");
                 }
-            });
+            },
+            complete: finish
         });
+    };
+    sound.click.play();
+    tSvg.animate({top: gProps.top, left: gProps.left, rot: gProps.rot}, {
+        duration: outSpeed,
+        step: function (now, tween) {
+            if (tween.prop === "rot") {
+                tSvg.css("transform", "rotate(" + now + "deg)");
+            }
+        },
+        complete: reverse
     });
+}
+
+function getRotationDegrees(obj) {
+    var angle = 0;
+    var matrix = obj.css("-webkit-transform") ||
+            obj.css("-moz-transform") ||
+            obj.css("-ms-transform") ||
+            obj.css("-o-transform") ||
+            obj.css("transform");
+    if (matrix !== 'none') {
+        var values = matrix.split('(')[1].split(')')[0].split(',');
+        var a = values[0];
+        var b = values[1];
+        angle = Math.round(Math.atan2(b, a) * (180 / Math.PI));
+    }
+    return angle;
+//    return ((angle < 0) ? angle + 360 : angle);
 }
 
 function onPlayerList(message) {
@@ -697,6 +749,7 @@ function createPlayerClickFunction(player) {
 
 function updateAttendeeList() {
     var panel = $("#attendeesPanel");
+    gameDesk.remove();
     panel.empty();
     attendeesStackDesks = [];
     if (attendees !== undefined) {
@@ -706,45 +759,29 @@ function updateAttendeeList() {
         var step = (2 * Math.PI) / (numPl + ((myId < 0) ? 1 : 0));
         var angle = Math.PI / 2 + step;
         var id = myId;
+        var isSmallSize = panel.width() < 800;
+        var rx = panel.width() * (!isSmallSize ? 0.35 : 0.25);
+        var ry = panel.height() * 0.26;
         for (var i = 0; i < numPl; i++) {
             id = getNextAllAttendeeId(id);
+            attendeesStackDesks[id] = createStackDesk();
             var player = players[ allAttendees[id] ];
-            var name = player.name;
-            var attendeeId = getAttendeeIdByName(name);
-            var token = attendeeId >= 0 ? attendees[attendeeId].gameTokens : -1;
-            var child = $("<div class='attendeeDesk'></div>");
-            var cardDesk = $("<div class='cardStack'></div>");
-            var nameContainer = $("<div class='attendeeNameContainer'></div>");
-            var nameDiv = $("<div class='attendeeName'></div>");
-            var nameSpan = $("<span class='playerPopupEnabled'>" + name + "</span>");
-            var p = player;
-            nameSpan.click(createPlayerClickFunction(player));
-            nameDiv.append(nameSpan);
-            var viewerList = getViewerList(name);
-            if (viewerList !== undefined && viewerList.length > 1) { // first entry is the own name
-                var viewerDiv = $("<div class='cardViewerName'></div>");
-                var viewerHtml = viewerList[1];
-                for (var n = 2; n < viewerList.length; n++) {
-                    viewerHtml += ("<br>" + viewerList[n]);
-                }
-                viewerDiv.html(viewerHtml);
-                nameDiv.append($("<br>")).append(viewerDiv);
+            var attendeeDesk = createAttendeeDesk(player, attendeesStackDesks[id]);
+            if (id === myId) {
+                panel.append(gameDesk);
             }
-            nameContainer.append(nameDiv);
-            nameContainer.append($("<div class='tokenImage" + token + "'></div>"));
-            child.append(cardDesk).append(nameContainer);
-            attendeesStackDesks[id] = cardDesk;
-            panel.append(child);
-            var isSmallSize = panel.width() < 720;
-            var rx = panel.width() * (!isSmallSize ? 0.3 : 0.25);
-            var ry = panel.height() * 0.25;
-            var l = (panel.width() >> 1) + rx * Math.cos(angle) - (child.outerWidth() >> 1);
-            var t = ((panel.height() >> 1) + ry * Math.sin(angle) - (1.45 * cardDesk.outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.5 : 1)));
-            l = (100 / panel.width() * l) + "%";
-            t = (100 / panel.height() * t) + "%";
-            child.css({left: l, top: t});
+            panel.append(attendeeDesk);
+            var l = (panel.width() >> 1) + rx * Math.cos(angle) - (attendeeDesk.outerWidth() >> 1);
+            var t = ((panel.height() >> 1) + ry * Math.sin(angle)
+                    - (1.2 * attendeesStackDesks[id].outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.4 : 1)));
+            attendeeDesk.css({left: l + "px", top: t + "px"});
             angle += step;
         }
+        if (!isAttendee()) {
+            panel.append(gameDesk);
+        }
+        gameDesk.css({top: (panel.height() - gameDesk.height()) * 0.5 - ((isSmallSize) ? 0.075 : 0.085) * panel.height() + "px", left: (panel.width() - gameDesk.width()) * 0.5 + "px"});
+
         updateAttendeeDeskColor();
         if (getMyAttendeeId() < 0) {
             $("#addToAttendeesBtn").show();
@@ -756,9 +793,38 @@ function updateAttendeeList() {
     }
 }
 
-function getClickFunction(player) {
+function createStackDesk() {
+    var cardDesk = $("<div class='cardStack'></div>");
+    return cardDesk;
+}
+
+function createAttendeeDesk(player, stackDesk) {
+    var attendeeId = getAttendeeIdByName(player.name);
+    var token = attendeeId >= 0 ? attendees[attendeeId].gameTokens : -1;
+    var playerDesk = $("<div class='attendeeDesk'></div>");
+    var nameContainer = $("<div class='attendeeNameContainer'></div>");
+    var nameDiv = $("<div class='attendeeName'></div>");
+    var nameSpan = $("<span class='playerPopupEnabled'>" + player.name + "</span>");
+    nameSpan.click(createPlayerClickFunction(player));
+    nameDiv.append(nameSpan);
+    var viewerList = getViewerList(player.name);
+    if (viewerList !== undefined && viewerList.length > 1) { // first entry is the own name
+        var viewerDiv = $("<div class='cardViewerName'></div>");
+        var viewerHtml = viewerList[1];
+        for (var n = 2; n < viewerList.length; n++) {
+            viewerHtml += ("<br>" + viewerList[n]);
+        }
+        viewerDiv.html(viewerHtml);
+        nameDiv.append($("<br>")).append(viewerDiv);
+    }
+    nameContainer.append(nameDiv);
+    nameContainer.append($("<div class='tokenImage" + token + "'></div>"));
+    playerDesk.append(stackDesk).append(nameContainer);
+    return playerDesk;
+}
+
+function getPlayerNameClickFunction(player) {
     return function (evt) {
-        log("Hello: " + player.name);
         showPlayerPopup(evt, player);
     }
 }
@@ -815,20 +881,41 @@ function updateAttendeeStacks(message) {
     }
 }
 
+function getGameStackProperties(id, card, desk) {
+    return {
+        y: desk.offset().top + ((desk.height() - card.height()) >> 1) + gameStackOffsets[id].y + "px",
+        x: desk.offset().left + ((desk.width() - card.width()) >> 1) - card.width() + id * card.width() + gameStackOffsets[id].x + "px",
+        r: gameStackRotations[id]
+    };
+}
+
 function updateCardStack(desk, cards) {
     try {
         if (desk !== undefined) {
+            var isGameStack = cards === gameStack;
             desk.empty();
             if (cards !== undefined && cards.length > 0) {
                 var isCovered = (cards === coveredStack);
+                var rotStepX = 7.5; // in degrees
                 for (var i = 0; i < cards.length; i++) {
                     var svg = (isCovered) ? getSvgCard(cards[i]).getUI().clone() : getSvgCard(cards[i]).getUI();
-                    $(svg).css("position", "static");
-                    $(svg).css("top", "");
-                    $(svg).css("left", "");
-                    var cardWrapper = $("<div class='cardWrapper'></div>");
-                    cardWrapper.append(svg);
-                    desk.append(cardWrapper);
+                    var card = $(svg);
+                    card.css("position", "fixed");
+                    desk.append(card);
+                    if (isGameStack) {
+                        var props = getGameStackProperties(i, card, desk);
+                        card.css("top", props.y);
+                        card.css("left", props.x);
+                        card.css("transform", "rotate(" + props.r + "deg)");
+                    } else {
+                        var shiftX = 0.5 * card.width();
+                        var y = ((desk.height() - card.height()) >> 1);
+                        var x = ((desk.width() - card.width()) >> 1) - shiftX;
+                        card.css("top", desk.offset().top + y + "px");
+                        card.css("left", desk.offset().left + x + i * shiftX + "px");
+                        card.css("transform", "rotate(" + (-rotStepX + i * rotStepX) + "deg)");
+                    }
+                    card.css("transform-origin", "50% 50%");
                 }
             }
         }

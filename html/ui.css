@@ -108,20 +108,16 @@ main {
 }
 
 #gameDesk{
-    position: absolute;
-    background-color: rgba(255,255,0,0.0);
-    border-radius:  0.5em;
-    padding: 0.5em;
-    left: 50%;
-    top: 40%;
-    transform: translate(-50%, -50%);
+    position: fixed;
+    /*background-color: rgba(255,255,0,1.0);*/ 
+    padding: 0.25em;
     display: flex;
     flex-direction: column;
-    width:11em;
+    width:14.7em;
 }
 
 .attendeeDesk, .moverDesk{
-    position: absolute;
+    position: fixed;
     color: white;
     font-weight: bold;
     background-color: rgba(17,12,12,0.4);
@@ -137,7 +133,19 @@ main {
 .moverDesk{
     background-color: rgba(255,255,0,0.1);
     border-color: rgba(255,255,128,0.75);
-    border-width: 1px;
+}
+.cardStack {
+    /*background-color: rgba(255,0,0, 0.5);*/
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    min-height: 8.1em;
+}
+
+/* ratio: 1,446428571428571*/
+.card {
+    width: 4.75em;
+    height: 6.8705em;
 }
 
 .attendeeNameContainer {
@@ -184,24 +192,6 @@ main {
     background-image: url("./50x-1small.png");
 }
 
-.cardStack {
-    width:100%;
-    display: flex;
-    align-items: center;
-    flex-grow: 1;
-    min-height: 5.06em;
-}
-
-/* ratio: 1,446428571428571*/
-.card {
-    width: 3.5em;
-    height: 5.06em;
-}
-.cardWrapper {
-    min-width: 3.5em;
-    min-height: 5.06em;
-    margin: 0.1em;
-}
 #playerListPanel{
     display: flex;
     justify-content: center;
@@ -211,7 +201,6 @@ main {
     left: 0px;
     position: fixed;
 }
-
 .playerOffline {
     color: darkgray;
     margin-left: 0.5em;
@@ -341,7 +330,7 @@ main {
 }
 
 /* Smart Phones und Tablets mit mittlerer Auflösung */
-@media all and (min-width: 45em) {
+@media all and (min-width: 50em) {
     body {
         font-size: 0.9em;
     }
@@ -359,24 +348,19 @@ main {
         margin-bottom: 0em;        
     }
     .cardStack {
-        min-height: 7.23em;
+        min-height: 10.3em;
     }
+    /* ratio: 1,446428571428571*/
     .card {
-        width: 5em;
-        height: 7.23em;
-    }
-    .cardWrapper {
-        min-width: 5em;
-        min-height: 7.23em;
+        width: 6em;
+        height: 8.678em;
     }
     #gameDesk{
-        top: 42%;
-        transform: translate(-50%, -50%);
-        width:15.5em;
+        width:18.5em;
     }
 
     .attendeeDesk, .moverDesk{
-        width:15.5em;
+        width:13.75em;
     }
     .tokenImage3, .tokenImage2, .tokenImage1, .tokenImage0, .tokenImage-1{
         width: 58px;
@@ -418,7 +402,7 @@ main {
 }
 
 /* Viewports mit großer Auflösung */
-@media all and (min-width: 80em) {
+@media all and (min-width: 70em) {
     body {
         font-size: 1em;
     }
@@ -429,24 +413,19 @@ main {
     }
 
     .cardStack {
-        min-height: 8.67em;
+        min-height: 10.1em;
     }
+    /* ratio: 1,446428571428571*/
     .card {
-        width: 6em;
-        height: 8.67em;
-    }
-    .cardWrapper {
-        min-width: 6em;
-        min-height: 8.67em;
+        width: 6.5em;
+        height: 9.402em;
     }
     #gameDesk{
-        top: 42%;
-        transform: translate(-50%, -50%);
-        width:18.6em;
+        width:20.2em;
     }
 
     .attendeeDesk, .moverDesk{
-        width:18.6em;
+        width:14.95em;
     }
     .tokenImage3, .tokenImage2, .tokenImage1, .tokenImage0, .tokenImage-1{
         width: 88px;

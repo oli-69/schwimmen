@@ -9,17 +9,15 @@ public class DiscoverMessage {
     public float finisherScore;
     public String finishKnocker;
     public DiscoverStack[] playerStacks;
-    public CardStack gameStack;
     public String[] payers;
     public String[] leavers;
     public int remainingAttendeesCount;
     public int finishSoundId;
 
     public DiscoverMessage(SchwimmenPlayer finisher, float finisherScore, SchwimmenPlayer finishKnocker, List<DiscoverStack> playerStacks,
-            List<cardgame.Card> gameStack, List<SchwimmenPlayer> payers, List<SchwimmenPlayer> leavers, int finishSoundId) {
+            List<SchwimmenPlayer> payers, List<SchwimmenPlayer> leavers, int finishSoundId) {
         this.finisherScore = finisherScore;
         this.playerStacks = playerStacks.toArray(new DiscoverStack[playerStacks.size()]);
-        this.gameStack = new CardStack(gameStack);
         this.payers = getNames(payers);
         this.leavers = getNames(leavers);
 
