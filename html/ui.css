@@ -108,7 +108,7 @@ main {
 }
 
 #gameDesk{
-    position: fixed;
+    position: absolute;
     /*background-color: rgba(255,255,0,1.0);*/ 
     padding: 0.25em;
     display: flex;
@@ -117,7 +117,7 @@ main {
 }
 
 .attendeeDesk, .moverDesk{
-    position: fixed;
+    position: absolute;
     color: white;
     font-weight: bold;
     background-color: rgba(17,12,12,0.4);

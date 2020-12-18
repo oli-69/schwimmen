@@ -302,6 +302,7 @@ function onDiscover(gamePhaseMessage) {
     onGamePhase(gamePhase);
     if (gamePhaseMessage.discoverMessage.finishKnocker !== undefined) {
         sound.knock2.play();
+        setTimeout(animateKnock, 500);
     } else if (gamePhaseMessage.discoverMessage.finisherScore === 33) {
         sound.fire.play();
     } else {
@@ -387,11 +388,15 @@ function onMoveResult(result) {
                 break;
             case "knock":
                 if (result.count === 1) {
-                    $("#knockMessage").html(mover === myName ? "Du klopfst" : mover + " klopft");
                     sound.knock1.play();
+                    $("#knockMessage").html(mover === myName ? "Du klopfst" : mover + " klopft");
                     animateGameDialog($("#knockDialog"));
+                    setTimeout(function () {
+                        animateKnock(readyFunction);
+                    }, 400);
+                } else {
+                    readyFunction();
                 }
-                readyFunction();
                 break;
             case "changeStack":
                 animateStackChange(readyFunction);
@@ -404,6 +409,25 @@ function onMoveResult(result) {
     }
 }
 
+function animateKnock(readyFunction) {
+    var gameStack = $("#gameStack");
+    var level = Math.random();
+    var bounceProps = {times: level * 3 + 4, distance: level * 8 + 2};
+    var bounceSpeed = 200;
+    $(gameStack.children()[0]).effect("bounce", bounceProps, bounceSpeed);
+    $(gameStack.children()[1]).effect("bounce", bounceProps, bounceSpeed);
+    $(gameStack.children()[2]).effect("bounce", bounceProps, bounceSpeed);
+    var lastProps = bounceProps;
+    if (typeof readyFunction === "function") {
+        lastProps = {
+            times: bounceProps.times,
+            distance: bounceProps.distance,
+            complete: readyFunction}
+    }
+    $("#attendeesPanel").effect("bounce", lastProps, bounceSpeed);
+
+}
+
 /* New Cards */
 function animateStackChange(readyFunction) {
     var speed = 2500;
@@ -412,9 +436,10 @@ function animateStackChange(readyFunction) {
     $("#passBtn").prop("disabled", true);
     $("#knockBtn").prop("disabled", true);
     $("#newCardsBtn").prop("disabled", true);
-    var svg1 = $($($("#gameStack").children()[0]));
-    var svg2 = $($($("#gameStack").children()[1]));
-    var svg3 = $($($("#gameStack").children()[2]));
+    var gameStack = $("#gameStack");
+    var svg1 = $(gameStack.children()[0]);
+    var svg2 = $(gameStack.children()[1]);
+    var svg3 = $(gameStack.children()[2]);
     var cardStack = $("#gameStack");
     var offX = cardStack.offset().left + cardStack.width() + 25;
     sound.newcards.play();
