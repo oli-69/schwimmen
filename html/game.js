@@ -87,6 +87,7 @@ function onMessageBuffer() {
         try {
             action();
         } catch (e) {
+            error("Fehler in onMessageBuffer -> " + action + " '" + e + "'");
             messageInProgress = false;
         }
 //        log("messageInProgress: " + messageInProgress + ", messageBuffer: " + messageBuffer.length);
@@ -302,7 +303,7 @@ function onDiscover(gamePhaseMessage) {
     onGamePhase(gamePhase);
     if (gamePhaseMessage.discoverMessage.finishKnocker !== undefined) {
         sound.knock2.play();
-        setTimeout(animateKnock, 500);
+        setTimeout(animateKnock, 100);
     } else if (gamePhaseMessage.discoverMessage.finisherScore === 33) {
         sound.fire.play();
     } else {
@@ -370,9 +371,7 @@ function onMoveResult(result) {
                 animateCardSwap(takenId, givenId, readyFunction);
                 break;
             case "swapAllCards":
-                animateCardSwap(0, 0);
-                animateCardSwap(1, 1);
-                animateCardSwap(2, 2, readyFunction);
+                animateAllCardsSwap(readyFunction);
                 break;
             case "pass":
                 var msg = (mover === myName ? "Du schiebst" : mover + " schiebt") + (result.count > 1 ? " mit" : "");
@@ -393,7 +392,7 @@ function onMoveResult(result) {
                     animateGameDialog($("#knockDialog"));
                     setTimeout(function () {
                         animateKnock(readyFunction);
-                    }, 400);
+                    }, 100);
                 } else {
                     readyFunction();
                 }
@@ -447,56 +446,151 @@ function animateStackChange(readyFunction) {
     svg2.animate({left: "-=" + offX}, speed);
     svg3.animate({left: "-=" + offX}, speed, function () {
         if (typeof readyFunction === "function") {
+            svg1.remove();
+            svg2.remove();
+            svg3.remove();
             readyFunction();
         }
     });
 }
 
-function animateCardSwap(takenId, givenId, readyFunction) {
-    var outSpeed = 2500;
-    var inSpeed = 1500;
+/* Swap all three cards */
+function animateAllCardsSwap(readyFunction) {
     $("#swapCardBtn").prop("disabled", true);
     $("#swapAllCardsBtn").prop("disabled", true);
     $("#passBtn").prop("disabled", true);
     $("#knockBtn").prop("disabled", true);
     $("#newCardsBtn").prop("disabled", true);
-    var attendeeDesk = attendeesStackDesks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
-    var tSvg = $($("#gameStack").children()[takenId]);
-    var gSvg = $(attendeeDesk.children()[givenId]);
-    var tProps = {top: tSvg.css("top"), left: tSvg.css("left"), rot: getRotationDegrees(tSvg)};
-    var gProps = {top: gSvg.css("top"), left: gSvg.css("left"), rot: getRotationDegrees(gSvg)};
-    tSvg.prop("rot", tProps.rot); // animate a pseudo property
-    gSvg.prop("rot", gProps.rot);
+    var gameStack = $("#gameStack");
+    var attendeeStack = attendeesStackDesks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
+    var gameCards = [];
+    var playerCardProps = [];
+    var playerCards = [];
+    var reverseTargetProps = [];
+    for (var i = 0; i < 3; i++) {
+        gameCards[i] = $(gameStack.children()[i]);
+        playerCards[i] = $(attendeeStack.children()[i]);
+        playerCardProps[i] = {top: playerCards[i].css("top"), left: playerCards[i].css("left"), rot: getRotationDegrees(playerCards[i])};
+        reverseTargetProps[i] = getGameStackProperties(i, gameCards[i], gameStack);
+        gameCards[i].prop("rot", getRotationDegrees(gameCards[i])); // animate a pseudo property
+        playerCards[i].prop("rot", playerCardProps[i].rot);
+    }
+
+    var reverseAnchorFunction = function () {
+        this.triggered = false;
+        gameStack.append(playerCards[0]);
+        gameStack.append(playerCards[1]);
+        gameStack.append(playerCards[2]);
+        this.triggered = true;
+    };
+
     var finish = function () {
+        if (!(reverseAnchorFunction.triggered)) {
+            reverseAnchorFunction();
+        }
+        sound.swap.play();
         if (typeof readyFunction === "function") {
-            sound.swap.play();
             readyFunction();
         }
     };
+
     var reverse = function () {
-        var targetProps = getGameStackProperties(takenId, tSvg, $("#gameStack"));
-        var targetRot = targetProps.r;
-        targetRot += cardFlips[takenId] * 360;
-        gSvg.animate({top: targetProps.y, left: targetProps.x, rot: targetRot}, {
-            duration: inSpeed,
-            step: function (now, tween) {
-                if (tween.prop === "rot") {
-                    gSvg.css("transform", "rotate(" + now + "deg)");
-                }
-            },
-            complete: finish
-        });
+        animateGiveCard(playerCards[0], reverseTargetProps[0], 0);
+        animateGiveCard(playerCards[1], reverseTargetProps[1], 0);
+        animateGiveCard(playerCards[2], reverseTargetProps[2], 0, reverseAnchorFunction, finish);
+    }
+
+    sound.click.play();
+    attendeeStack.prepend(gameCards[2]);
+    attendeeStack.prepend(gameCards[1]);
+    attendeeStack.prepend(gameCards[0]);
+    animateTakeCard(gameCards[0], playerCardProps[0]);
+    animateTakeCard(gameCards[1], playerCardProps[1]);
+    animateTakeCard(gameCards[2], playerCardProps[2], reverse);
+}
+
+/* Swap a single card */
+function animateCardSwap(takenId, givenId, readyFunction) {
+    $("#swapCardBtn").prop("disabled", true);
+    $("#swapAllCardsBtn").prop("disabled", true);
+    $("#passBtn").prop("disabled", true);
+    $("#knockBtn").prop("disabled", true);
+    $("#newCardsBtn").prop("disabled", true);
+    var gameStack = $("#gameStack");
+    var attendeeStack = attendeesStackDesks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
+    var gameStackAnchor = gameStack.children()[takenId + 1];
+    var tSvg = $(gameStack.children()[takenId]);
+    var gSvg = $(attendeeStack.children()[givenId]);
+    var gProps = {top: gSvg.css("top"), left: gSvg.css("left"), rot: getRotationDegrees(gSvg)};
+    tSvg.prop("rot", getRotationDegrees(tSvg)); // animate a pseudo property
+    gSvg.prop("rot", gProps.rot);
+
+    var reverseAnchorFunction = function () {
+        this.triggered = false;
+        if (gameStackAnchor !== undefined) {
+            gSvg.insertBefore(gameStackAnchor);
+        } else {
+            gameStack.append(gSvg);
+        }
+        this.triggered = true;
+    };
+
+    var finish = function () {
+        if (!(reverseAnchorFunction.triggered)) {
+            reverseAnchorFunction();
+        }
+        sound.swap.play();
+        if (typeof readyFunction === "function") {
+            readyFunction();
+        }
+    };
+    var targetProps = getGameStackProperties(takenId, tSvg, gameStack);
+    var reverse = function () {
+        animateGiveCard(gSvg, targetProps, cardFlips[takenId], reverseAnchorFunction, finish);
     };
     sound.click.play();
-    tSvg.animate({top: gProps.top, left: gProps.left, rot: gProps.rot}, {
+    tSvg.insertBefore(gSvg);
+    animateTakeCard(tSvg, gProps, reverse);
+}
+
+function animateGiveCard(card, targetProps, cardFlips, reverseAnchorFunction, finish) {
+    var inSpeed = 1500;
+    var targetRot = targetProps.r;
+    targetRot += cardFlips * 360;
+    var triggerVal = 0.5 * (targetRot - getRotationDegrees(card));
+    var animProps = {
+        duration: inSpeed,
+        step: function (now, tween) {
+            if (tween.prop === "rot") {
+                card.css("transform", "rotate(" + now + "deg)");
+                if (reverseAnchorFunction && !(reverseAnchorFunction.triggered)) {
+                    if (Math.abs(tween.start - now) >= triggerVal * (tween.start < tween.end ? 1 : -1)) {
+                        reverseAnchorFunction();
+                    }
+                }
+            }
+        }
+    };
+    if (typeof finish === "function") {
+        animProps.complete = finish;
+    }
+    card.animate({top: targetProps.y, left: targetProps.x, rot: targetRot}, animProps);
+}
+
+function animateTakeCard(card, targetProps, reverse) {
+    var outSpeed = 2500;
+    var animProps = {
         duration: outSpeed,
         step: function (now, tween) {
             if (tween.prop === "rot") {
-                tSvg.css("transform", "rotate(" + now + "deg)");
+                card.css("transform", "rotate(" + now + "deg)");
             }
-        },
-        complete: reverse
-    });
+        }
+    }
+    if (typeof reverse === "function") {
+        animProps.complete = reverse;
+    }
+    card.animate({top: targetProps.top, left: targetProps.left, rot: targetProps.rot}, animProps);
 }
 
 function getRotationDegrees(obj) {

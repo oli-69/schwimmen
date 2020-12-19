@@ -251,3 +251,11 @@ function closeSocket() {
 function log(text) {
     console.log(text);
 }
+
+function warn(text) {
+    console.warn(text);
+}
+
+function error(text) {
+    console.error(text);
+}
