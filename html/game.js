@@ -192,9 +192,15 @@ function onGamePhaseMessage(message) {
         case "dealCards":
             updateAttendeeList();
             updateAttendeeStacks(undefined);
-            onGamePhase(gamePhase);
+            sound.deal.play();
+            animateDealCards(function () {
+                onGamePhase(gamePhase);
+            });
             break;
         case "waitForAttendees":
+            updateAttendeeList();
+            onGamePhase(gamePhase);
+            break;
         case "waitForPlayerMove":
             updateAttendeeStacks(undefined);
             onGamePhase(gamePhase);
@@ -250,9 +256,6 @@ function onGamePhase(phase) {
         sound.shuffle.play();
     } else if (!sound.shuffle.paused) {
         sound.shuffle.pause();
-    }
-    if (phase === "dealCards") {
-        sound.deal.play();
     }
     messageInProgress = false;
 }
@@ -435,6 +438,73 @@ function animateKnock(readyFunction) {
     }
     $("#attendeesPanel").effect("bounce", lastProps, bounceSpeed);
 
+}
+
+function animateDealCards(readyFunction) {
+    setGameDialogVisible($("#dealCardsDialog"), false);
+    var cards = [];
+    var props = [];
+    var dealerId = getAllAttendeeIdByPlayerId(getPlayerIdByName(mover));
+    var id = dealerId;
+    var numPlayers = allAttendees.length;
+    var c = 0;
+    var childs;
+    var card = $(dealer2ndStack.children()[0]);
+    var dealerStack = attendeesCardStacks[id];
+    var off = dealerStack.offset();
+    var top = off.top + (dealerStack.height() - card.height());
+    var left = off.left + (dealerStack.width() - card.width()) * 0.5;
+    for (var y = 0; y < 3; y++) {
+        for (var i = 0; i < numPlayers; i++) {
+            id = getNextAllAttendeeId(id);
+            childs = attendeesCardStacks[id].children();
+            if (id === dealerId) {
+                card = $(dealer2ndStack.children()[y]);
+                props[c] = {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
+                card.css({top: top, left: left, rot: 0});
+                card.hide();
+                cards[c++] = card;
+            }
+            if (childs.length > 0) {
+                card = $(childs[y]);
+                props[c] = {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
+                card.css({top: top, left: left, rot: 0});
+                card.hide();
+                cards[c++] = card;
+            }
+        }
+    }
+    var delay = 400;
+    for (var i = 0; i < cards.length; i++) {
+        if (i === cards.length - 1) {
+            animateDealSingleCard(cards[i], top, left, props[i], i * delay, readyFunction);
+        }
+        animateDealSingleCard(cards[i], top, left, props[i], i * delay);
+    }
+}
+
+function animateDealSingleCard(card, top, left, props, delay, readyFunction) {
+    var distance = Math.abs(calculateDistanceBetweenPoints(left, top, parseFloat(props.x), parseFloat(props.y)));
+    var animTime = 1.75 * distance;
+    var animProps = {
+        duration: animTime,
+        step: function (now, tween) {
+            if (tween.prop === "rot") {
+                card.css("transform", "rotate(" + now + "deg)");
+            }
+        }
+    };
+    if (typeof readyFunction === "function") {
+        animProps.complete = readyFunction;
+    }
+    setTimeout(function () {
+        card.show();
+        card.animate({top: props.y, left: props.x, rot: props.r}, animProps);
+    }, delay);
+}
+
+function calculateDistanceBetweenPoints(x1, y1, x2, y2) {
+    return Math.sqrt((y2 - y1) * (y2 - y1) + (x2 - x1) * (x2 - x1));
 }
 
 function animateSelectStack(isKeepStack, readyFunction) {
