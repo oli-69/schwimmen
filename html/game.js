@@ -9,12 +9,14 @@ var playerStack;
 var gameStack;
 var gameStackOffsets = [];
 var gameStackRotations = [];
+var dealer2ndStackProps;
 var cardFlips = [3];
 var gameDesk;
 var viewerStacks;
 var changeStackAllowed;
 var knockAllowed;
-var attendeesStackDesks = [];
+var attendeesCardStacks = [];
+var dealer2ndStack;
 var coveredCard = {color: -1, value: -1};
 var coveredStack = [coveredCard, coveredCard, coveredCard];
 var swapSelection = {myStackId: -1, gameStackId: -1};
@@ -188,6 +190,7 @@ function onGamePhaseMessage(message) {
             onGamePhase(gamePhase);
             break;
         case "dealCards":
+            updateAttendeeList();
             updateAttendeeStacks(undefined);
             onGamePhase(gamePhase);
             break;
@@ -230,7 +233,7 @@ function onGamePhase(phase) {
     updatePlayerList();
     updateControlPanelMessage();
     updateCardStack($("#gameStack"), gameStack);
-    updateCardStack(attendeesStackDesks[getMyAllAttendeeId()], playerStack);
+    updateCardStack(attendeesCardStacks[getMyAllAttendeeId()], playerStack);
     updateAttendeeDeskColor();
 
     // Control Panel
@@ -250,7 +253,7 @@ function onGamePhase(phase) {
     }
     if (phase === "dealCards") {
         sound.deal.play();
-    }
+    } 
     messageInProgress = false;
 }
 
@@ -363,6 +366,9 @@ function onMoveResult(result) {
                 }
                 sound.selectStack.play();
                 animateGameDialog($("#dealerStackSelectedDialog"));
+                dealer2ndStackProps = undefined;
+                dealer2ndStack = undefined;
+                updateAttendeeList();
                 readyFunction();
                 break;
             case "swapCard":
@@ -462,7 +468,7 @@ function animateAllCardsSwap(readyFunction) {
     $("#knockBtn").prop("disabled", true);
     $("#newCardsBtn").prop("disabled", true);
     var gameStack = $("#gameStack");
-    var attendeeStack = attendeesStackDesks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
+    var attendeeStack = attendeesCardStacks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
     var gameCards = [];
     var playerCardProps = [];
     var playerCards = [];
@@ -517,7 +523,7 @@ function animateCardSwap(takenId, givenId, readyFunction) {
     $("#knockBtn").prop("disabled", true);
     $("#newCardsBtn").prop("disabled", true);
     var gameStack = $("#gameStack");
-    var attendeeStack = attendeesStackDesks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
+    var attendeeStack = attendeesCardStacks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
     var gameStackAnchor = gameStack.children()[takenId + 1];
     var tSvg = $(gameStack.children()[takenId]);
     var gSvg = $(attendeeStack.children()[givenId]);
@@ -870,7 +876,7 @@ function updateAttendeeList() {
     var panel = $("#attendeesPanel");
     gameDesk.remove();
     panel.empty();
-    attendeesStackDesks = [];
+    attendeesCardStacks = [];
     if (attendees !== undefined) {
         var otherAttendeesCount = allAttendees.length - (isInAllAttendees() ? 1 : 0);
         var myId = getMyAllAttendeeId();
@@ -883,17 +889,24 @@ function updateAttendeeList() {
         var ry = panel.height() * 0.26;
         for (var i = 0; i < numPl; i++) {
             id = getNextAllAttendeeId(id);
-            attendeesStackDesks[id] = createStackDesk();
+            attendeesCardStacks[id] = createCardStack();
             var player = players[ allAttendees[id] ];
-            var attendeeDesk = createAttendeeDesk(player, attendeesStackDesks[id]);
-            if (id === myId) {
+            var attendeeDesk = createAttendeeDesk(player, attendeesCardStacks[id]);
+            if (id === myId) { // add the game desk here
                 panel.append(gameDesk);
             }
             panel.append(attendeeDesk);
-            var l = (panel.width() >> 1) + rx * Math.cos(angle) - (attendeeDesk.outerWidth() >> 1);
-            var t = ((panel.height() >> 1) + ry * Math.sin(angle)
-                    - (1.2 * attendeesStackDesks[id].outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.4 : 1)));
+            var l = (panel.width() * 0.5) + rx * Math.cos(angle) - (attendeeDesk.outerWidth() >> 1);
+            var t = ((panel.height() * 0.5) + ry * Math.sin(angle)
+                    - (1.2 * attendeesCardStacks[id].outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.4 : 1)));
             attendeeDesk.css({left: l + "px", top: t + "px"});
+            if (gamePhase === "dealCards" && player.name === mover) { // add the dealer 2nd stack here
+                dealer2ndStack = createCardStack();
+                dealer2ndStack.insertBefore(attendeesCardStacks[id]);
+                var hSide = (id === myId ? 1 : (otherAttendeesCount > 1 ? ((l + 0.5 * attendeeDesk.outerWidth()) > (0.5 * panel.width()) ? -1 : 1) : -1));
+                var vSide = (t + 0.5 * attendeeDesk.outerHeight()) > (0.5 * panel.height()) ? -1 : 1;
+                dealer2ndStack.css({position: "absolute", left: hSide * ((hSide > 0 ? 0.8 : 0.2) * attendeesCardStacks[id].outerWidth()) + "px", top: vSide * 30 + "px"});
+            }
             angle += step;
         }
         if (!isAttendee()) {
@@ -912,7 +925,7 @@ function updateAttendeeList() {
     }
 }
 
-function createStackDesk() {
+function createCardStack() {
     var cardDesk = $("<div class='cardStack'></div>");
     return cardDesk;
 }
@@ -956,7 +969,7 @@ function updateAttendeeDeskColor() {
             id = getNextAllAttendeeId(id);
             var attendee = players[allAttendees[id]];
             var className = (mover === attendee.name) ? "moverDesk" : "attendeeDesk";
-            attendeesStackDesks[id].parent().prop("class", className);
+            attendeesCardStacks[id].parent().prop("class", className);
         }
     }
 }
@@ -964,7 +977,7 @@ function updateAttendeeDeskColor() {
 function emptyAllStackDesks() {
     playerStack = undefined;
     gameStack = undefined;
-    attendeesStackDesks.forEach(function (desk) {
+    attendeesCardStacks.forEach(function (desk) {
         desk.empty();
     });
     $("#gameStack").empty();
@@ -978,10 +991,10 @@ function updateAttendeeStacks(message) {
         }
         var id = getMyAllAttendeeId();
         var deskId = getMyAllAttendeeId();
-        var myDesk = deskId >= 0 ? attendeesStackDesks[deskId] : undefined;
+        var myDesk = deskId >= 0 ? attendeesCardStacks[deskId] : undefined;
         for (var i = 0; i < allAttendees.length; i++) {
             id = getNextAllAttendeeId(id);
-            var desk = attendeesStackDesks[id];
+            var desk = attendeesCardStacks[id];
             if (desk !== myDesk) {
                 var playerName = players[allAttendees[id]].name;
                 var isAttendee = getAttendeeIdByName(playerName) >= 0;
@@ -994,6 +1007,9 @@ function updateAttendeeStacks(message) {
             } else {
                 updateCardStack(desk, playerStack);
             }
+        }
+        if (dealer2ndStack !== undefined) {
+            updateCardStack(dealer2ndStack, coveredStack);
         }
     } catch (e) {
         log("Fehler in updateAttendeeStacks(): '" + e + "'");
@@ -1008,10 +1024,25 @@ function getGameStackProperties(id, card, desk) {
     };
 }
 
+function getDealer2ndStackProperties() {
+    if (dealer2ndStackProps === undefined) {
+        dealer2ndStackProps = [];
+        for (var i = 0; i < 3; i++) {
+            dealer2ndStackProps[i] = {
+                x: (Math.random() * (2 * 16)) - 16,
+                y: (Math.random() * (2 * 8)) - 8,
+                r: (Math.random() * (2 * 4)) - 4
+            }
+        }
+    }
+    return dealer2ndStackProps;
+}
+
 function updateCardStack(desk, cards) {
     try {
         if (desk !== undefined) {
             var isGameStack = cards === gameStack;
+            var isDealer2ndStack = desk === dealer2ndStack;
             desk.empty();
             if (cards !== undefined && cards.length > 0) {
                 var isCovered = (cards === coveredStack);
@@ -1023,9 +1054,11 @@ function updateCardStack(desk, cards) {
                     desk.append(card);
                     if (isGameStack) {
                         var props = getGameStackProperties(i, card, desk);
-                        card.css("top", props.y);
-                        card.css("left", props.x);
-                        card.css("transform", "rotate(" + props.r + "deg)");
+                        card.css({top: props.y, left: props.x, transform: "rotate(" + props.r + "deg)"});
+                    } else if (isDealer2ndStack) {
+                        var props = getDealer2ndStackProperties()[i];
+                        var off = dealer2ndStack.offset();
+                        card.css({top: off.top + props.y + "px", left: off.left + props.x + "px", transform: "rotate(" + props.r + "deg)"});
                     } else {
                         var shiftX = 0.5 * card.width();
                         var y = ((desk.height() - card.height()) >> 1);
