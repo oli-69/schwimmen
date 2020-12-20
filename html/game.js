@@ -253,7 +253,7 @@ function onGamePhase(phase) {
     }
     if (phase === "dealCards") {
         sound.deal.play();
-    } 
+    }
     messageInProgress = false;
 }
 
@@ -359,17 +359,21 @@ function onMoveResult(result) {
         };
         switch (result.move) {
             case "selectStack":
-                if (result.stackAction === 'keep') {
+                var isKeepStack = result.stackAction === 'keep';
+                if (isKeepStack) {
                     $("#stackSelectMessage").html((mover === myName ? "Du beh&auml;ltst" : mover + " beh&auml;lt") + " die Karten");
                 } else {
                     $("#stackSelectMessage").html((mover === myName ? "Du wechselst" : mover + " wechselt") + " die Karten");
                 }
                 sound.selectStack.play();
+                setGameDialogVisible($("#selectDealerStackDialog"), false);
                 animateGameDialog($("#dealerStackSelectedDialog"));
-                dealer2ndStackProps = undefined;
-                dealer2ndStack = undefined;
-                updateAttendeeList();
-                readyFunction();
+                animateSelectStack(isKeepStack, function () {
+                    dealer2ndStackProps = undefined;
+                    dealer2ndStack = undefined;
+                    updateAttendeeList();
+                    readyFunction();
+                });
                 break;
             case "swapCard":
                 var takenId = result.cardSwap.stackIdTaken;
@@ -431,6 +435,46 @@ function animateKnock(readyFunction) {
     }
     $("#attendeesPanel").effect("bounce", lastProps, bounceSpeed);
 
+}
+
+function animateSelectStack(isKeepStack, readyFunction) {
+    var gameStack = $("#gameStack");
+    var attendeeStack = attendeesCardStacks[getAllAttendeeIdByPlayerId(getPlayerIdByName(mover))];
+    var playerCards = [];
+    var dealer2ndCards = [];
+    var trashCards = [];
+    var trashCardProps = [];
+    var playerCardProps = [];
+    for (var i = 0; i < 3; i++) {
+        playerCards[i] = $(attendeeStack.children()[i]);
+        dealer2ndCards[i] = $(dealer2ndStack.children()[i]);
+        playerCardProps[i] = {top: playerCards[i].css("top"), left: playerCards[i].css("left"), rot: getRotationDegrees(playerCards[i])};
+        trashCardProps[i] = getGameStackProperties(i, playerCards[i], gameStack);
+    }
+
+    var reAnchorFunction = function () {
+        this.triggered = false;
+        gameStack.append(trashCards[0]);
+        gameStack.append(trashCards[1]);
+        gameStack.append(trashCards[2]);
+        this.triggered = true;
+    };
+
+    var finishFunction = isKeepStack ? readyFunction : function () {
+        attendeeStack.prepend(dealer2ndStack[2]);
+        attendeeStack.prepend(dealer2ndStack[1]);
+        attendeeStack.prepend(dealer2ndStack[0]);
+        var takeSpeed = 500;
+        animateTakeCard(takeSpeed, dealer2ndCards[0], playerCardProps[0]);
+        animateTakeCard(takeSpeed, dealer2ndCards[1], playerCardProps[1]);
+        animateTakeCard(takeSpeed, dealer2ndCards[2], playerCardProps[2], readyFunction);
+    };
+
+    var giveSpeed = 1500;
+    var trashCards = isKeepStack ? dealer2ndCards : playerCards;
+    animateGiveCard(giveSpeed, trashCards[0], trashCardProps[0], 0);
+    animateGiveCard(giveSpeed, trashCards[1], trashCardProps[1], 0);
+    animateGiveCard(giveSpeed, trashCards[2], trashCardProps[2], 0, reAnchorFunction, finishFunction);
 }
 
 /* New Cards */
@@ -501,18 +545,20 @@ function animateAllCardsSwap(readyFunction) {
     };
 
     var reverse = function () {
-        animateGiveCard(playerCards[0], reverseTargetProps[0], 0);
-        animateGiveCard(playerCards[1], reverseTargetProps[1], 0);
-        animateGiveCard(playerCards[2], reverseTargetProps[2], 0, reverseAnchorFunction, finish);
+        var giveSpeed = 1500;
+        animateGiveCard(giveSpeed, playerCards[0], reverseTargetProps[0], 0);
+        animateGiveCard(giveSpeed, playerCards[1], reverseTargetProps[1], 0);
+        animateGiveCard(giveSpeed, playerCards[2], reverseTargetProps[2], 0, reverseAnchorFunction, finish);
     }
 
     sound.click.play();
     attendeeStack.prepend(gameCards[2]);
     attendeeStack.prepend(gameCards[1]);
     attendeeStack.prepend(gameCards[0]);
-    animateTakeCard(gameCards[0], playerCardProps[0]);
-    animateTakeCard(gameCards[1], playerCardProps[1]);
-    animateTakeCard(gameCards[2], playerCardProps[2], reverse);
+    var takeSpeed = 2500;
+    animateTakeCard(takeSpeed, gameCards[0], playerCardProps[0]);
+    animateTakeCard(takeSpeed, gameCards[1], playerCardProps[1]);
+    animateTakeCard(takeSpeed, gameCards[2], playerCardProps[2], reverse);
 }
 
 /* Swap a single card */
@@ -552,20 +598,19 @@ function animateCardSwap(takenId, givenId, readyFunction) {
     };
     var targetProps = getGameStackProperties(takenId, tSvg, gameStack);
     var reverse = function () {
-        animateGiveCard(gSvg, targetProps, cardFlips[takenId], reverseAnchorFunction, finish);
+        animateGiveCard(1500, gSvg, targetProps, cardFlips[takenId], reverseAnchorFunction, finish);
     };
     sound.click.play();
     tSvg.insertBefore(gSvg);
-    animateTakeCard(tSvg, gProps, reverse);
+    animateTakeCard(2500, tSvg, gProps, reverse);
 }
 
-function animateGiveCard(card, targetProps, cardFlips, reverseAnchorFunction, finish) {
-    var inSpeed = 1500;
+function animateGiveCard(speed, card, targetProps, cardFlips, reverseAnchorFunction, finish) {
     var targetRot = targetProps.r;
     targetRot += cardFlips * 360;
     var triggerVal = 0.5 * (targetRot - getRotationDegrees(card));
     var animProps = {
-        duration: inSpeed,
+        duration: speed,
         step: function (now, tween) {
             if (tween.prop === "rot") {
                 card.css("transform", "rotate(" + now + "deg)");
@@ -583,10 +628,9 @@ function animateGiveCard(card, targetProps, cardFlips, reverseAnchorFunction, fi
     card.animate({top: targetProps.y, left: targetProps.x, rot: targetRot}, animProps);
 }
 
-function animateTakeCard(card, targetProps, reverse) {
-    var outSpeed = 2500;
+function animateTakeCard(speed, card, targetProps, reverse) {
     var animProps = {
-        duration: outSpeed,
+        duration: speed,
         step: function (now, tween) {
             if (tween.prop === "rot") {
                 card.css("transform", "rotate(" + now + "deg)");
@@ -901,11 +945,7 @@ function updateAttendeeList() {
                     - (1.2 * attendeesCardStacks[id].outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.4 : 1)));
             attendeeDesk.css({left: l + "px", top: t + "px"});
             if (gamePhase === "dealCards" && player.name === mover) { // add the dealer 2nd stack here
-                dealer2ndStack = createCardStack();
-                dealer2ndStack.insertBefore(attendeesCardStacks[id]);
-                var hSide = (id === myId ? 1 : (otherAttendeesCount > 1 ? ((l + 0.5 * attendeeDesk.outerWidth()) > (0.5 * panel.width()) ? -1 : 1) : -1));
-                var vSide = (t + 0.5 * attendeeDesk.outerHeight()) > (0.5 * panel.height()) ? -1 : 1;
-                dealer2ndStack.css({position: "absolute", left: hSide * ((hSide > 0 ? 0.8 : 0.2) * attendeesCardStacks[id].outerWidth()) + "px", top: vSide * 30 + "px"});
+                createDealer2ndStack(attendeeDesk, panel);
             }
             angle += step;
         }
@@ -923,6 +963,24 @@ function updateAttendeeList() {
             $("#removeFromAttendeesBtn").show();
         }
     }
+}
+
+function createDealer2ndStack(attendeeDesk, panel) {
+    dealer2ndStack = createCardStack();
+    dealer2ndStack.insertBefore(attendeeDesk);
+    var off = attendeeDesk.offset();
+    var isNorth = (off.top + 0.5 * attendeeDesk.outerHeight()) > (0.5 * panel.height()) ? false : true;
+    var card = $(getSvgCard(coveredCard).getUI()).clone();
+    var cardSize;
+    $("body").prepend(card);
+    cardSize = {w: card.width(), h: card.height()};
+    card.remove();
+    dealer2ndStack.css({
+        position: "absolute",
+        left: (off.left + 30) + "px",
+        top: (off.top + (isNorth ? (cardSize.h * 0.6) : -(cardSize.h * 0.15))) + "px"
+    });
+    return dealer2ndStack;
 }
 
 function createCardStack() {
