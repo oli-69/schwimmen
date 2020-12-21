@@ -64,7 +64,7 @@ public class GameStackProperties {
     }
 
     private boolean shallFlip() {
-        return Math.random() > 0.8;
+        return Math.random() > 0.9;
     }
 
     private void clearFlips() {

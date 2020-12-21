@@ -461,14 +461,14 @@ function animateDealCards(readyFunction) {
             if (id === dealerId) {
                 card = $(dealer2ndStack.children()[y]);
                 props[c] = {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
-                card.css({top: top, left: left, rot: 0});
+                card.css({top: top, left: left});
                 card.hide();
                 cards[c++] = card;
             }
             if (childs.length > 0) {
                 card = $(childs[y]);
                 props[c] = {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
-                card.css({top: top, left: left, rot: 0});
+                card.css({top: top, left: left});
                 card.hide();
                 cards[c++] = card;
             }
@@ -486,6 +486,7 @@ function animateDealCards(readyFunction) {
 function animateDealSingleCard(card, top, left, props, delay, readyFunction) {
     var distance = Math.abs(calculateDistanceBetweenPoints(left, top, parseFloat(props.x), parseFloat(props.y)));
     var animTime = 1.75 * distance;
+    card.prop("rot", 0);    
     var animProps = {
         duration: animTime,
         step: function (now, tween) {
@@ -592,8 +593,6 @@ function animateAllCardsSwap(readyFunction) {
         playerCards[i] = $(attendeeStack.children()[i]);
         playerCardProps[i] = {top: playerCards[i].css("top"), left: playerCards[i].css("left"), rot: getRotationDegrees(playerCards[i])};
         reverseTargetProps[i] = getGameStackProperties(i, gameCards[i], gameStack);
-        gameCards[i].prop("rot", getRotationDegrees(gameCards[i])); // animate a pseudo property
-        playerCards[i].prop("rot", playerCardProps[i].rot);
     }
 
     var reverseAnchorFunction = function () {
@@ -619,7 +618,7 @@ function animateAllCardsSwap(readyFunction) {
         animateGiveCard(giveSpeed, playerCards[0], reverseTargetProps[0], 0);
         animateGiveCard(giveSpeed, playerCards[1], reverseTargetProps[1], 0);
         animateGiveCard(giveSpeed, playerCards[2], reverseTargetProps[2], 0, reverseAnchorFunction, finish);
-    }
+    };
 
     sound.click.play();
     attendeeStack.prepend(gameCards[2]);
@@ -644,8 +643,6 @@ function animateCardSwap(takenId, givenId, readyFunction) {
     var tSvg = $(gameStack.children()[takenId]);
     var gSvg = $(attendeeStack.children()[givenId]);
     var gProps = {top: gSvg.css("top"), left: gSvg.css("left"), rot: getRotationDegrees(gSvg)};
-    tSvg.prop("rot", getRotationDegrees(tSvg)); // animate a pseudo property
-    gSvg.prop("rot", gProps.rot);
 
     var reverseAnchorFunction = function () {
         this.triggered = false;
@@ -676,9 +673,11 @@ function animateCardSwap(takenId, givenId, readyFunction) {
 }
 
 function animateGiveCard(speed, card, targetProps, cardFlips, reverseAnchorFunction, finish) {
+    var startRot = getRotationDegrees(card);
     var targetRot = targetProps.r;
     targetRot += cardFlips * 360;
-    var triggerVal = 0.5 * (targetRot - getRotationDegrees(card));
+    var triggerVal = 0.5 * (targetRot - startRot);
+    card.prop("rot", startRot);
     var animProps = {
         duration: speed,
         step: function (now, tween) {
@@ -699,6 +698,7 @@ function animateGiveCard(speed, card, targetProps, cardFlips, reverseAnchorFunct
 }
 
 function animateTakeCard(speed, card, targetProps, reverse) {
+    card.prop("rot", getRotationDegrees(card));
     var animProps = {
         duration: speed,
         step: function (now, tween) {
@@ -706,7 +706,7 @@ function animateTakeCard(speed, card, targetProps, reverse) {
                 card.css("transform", "rotate(" + now + "deg)");
             }
         }
-    }
+    };
     if (typeof reverse === "function") {
         animProps.complete = reverse;
     }
@@ -727,7 +727,6 @@ function getRotationDegrees(obj) {
         angle = Math.round(Math.atan2(b, a) * (180 / Math.PI));
     }
     return angle;
-//    return ((angle < 0) ? angle + 360 : angle);
 }
 
 function onPlayerList(message) {
