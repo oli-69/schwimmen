@@ -1259,7 +1259,7 @@ public class SchwimmenGame extends CardGame {
     }
 
     private void initFinishSoundIds() {
-        int soundCount = 12;
+        int soundCount = 13;
         List<Integer> soundIDs = new ArrayList<>();
         for (int i = 0; i < soundCount; i++) {
             soundIDs.add(i);

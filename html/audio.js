@@ -19,7 +19,7 @@ function SoundFiles() {
     this.coin = new Audio();
     this.askview = new Audio();
     this.finishSound = [];
-    this.finishSound.length = 12;
+    this.finishSound.length = 13;
     for (var i = 0; i < this.finishSound.length; i++) {
         this.finishSound[i] = new Audio();
     }
