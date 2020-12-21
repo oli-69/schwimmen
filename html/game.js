@@ -19,6 +19,7 @@ var attendeesCardStacks = [];
 var dealer2ndStack;
 var coveredCard = {color: -1, value: -1};
 var coveredStack = [coveredCard, coveredCard, coveredCard];
+var shufflingCard;
 var swapSelection = {myStackId: -1, gameStackId: -1};
 var messageInProgress;
 var questionMessageInProgress;
@@ -33,6 +34,7 @@ function onDocumentReady() {
         $("#loginConsole").html("&nbsp;");
     });
     gameDesk = $("#gameDesk");
+    shufflingCard = $(getSvgCard(coveredCard).getUI()).clone();
     setGameDialogVisible($("#joinInOutDialog"), false);
     setGameDialogVisible($("#dealCardsDialog"), false);
     setGameDialogVisible($("#selectDealerStackDialog"), false);
@@ -250,13 +252,8 @@ function onGamePhase(phase) {
     $("#knockBtn").prop("disabled", !(meIsMoverInGame && knockAllowed));
     $("#newCardsBtn").prop("disabled", !(meIsMoverInGame && changeStackAllowed));
 
-    // Sounds
-    if (phase === "shuffle") {
-        sound.shuffle.loop = true;
-        sound.shuffle.play();
-    } else if (!sound.shuffle.paused) {
-        sound.shuffle.pause();
-    }
+    setShuffling(phase === "shuffle");
+
     messageInProgress = false;
 }
 
@@ -434,10 +431,43 @@ function animateKnock(readyFunction) {
         lastProps = {
             times: bounceProps.times,
             distance: bounceProps.distance,
-            complete: readyFunction}
+            complete: readyFunction};
     }
     $("#attendeesPanel").effect("bounce", lastProps, bounceSpeed);
 
+}
+
+function setShuffling(isShuffling) {
+    if (isShuffling) {
+        sound.shuffle.loop = true;
+        sound.shuffle.play();
+        $("body").prepend(shufflingCard);
+        var pos = getShuffleCardsPosition(shufflingCard);
+        shufflingCard.css({position: "fixed", top: pos.top, left: pos.left});
+        pos.stack.append(shufflingCard);
+        var shakeTime = 1000;
+        var shakes = 6;
+        var shakeAmount = 2;
+        function loopShake() {
+            shufflingCard.effect("shake", {distance: shakeAmount, times: shakes}, shakeTime, loopShake);
+        }
+        loopShake();
+    } else if (!sound.shuffle.paused) {
+        sound.shuffle.pause();
+        shufflingCard.stop();
+        shufflingCard.remove();
+    }
+}
+
+function getShuffleCardsPosition(card) {
+    var id = getAllAttendeeIdByPlayerId(getPlayerIdByName(mover));
+    var dealerStack = attendeesCardStacks[id];
+    var off = dealerStack.offset();
+    return {
+        top: off.top + (dealerStack.height() - card.height()),
+        left: off.left + (dealerStack.width() - card.width()) * 0.5,
+        stack: dealerStack
+    };
 }
 
 function animateDealCards(readyFunction) {
@@ -450,10 +480,7 @@ function animateDealCards(readyFunction) {
     var c = 0;
     var childs;
     var card = $(dealer2ndStack.children()[0]);
-    var dealerStack = attendeesCardStacks[id];
-    var off = dealerStack.offset();
-    var top = off.top + (dealerStack.height() - card.height());
-    var left = off.left + (dealerStack.width() - card.width()) * 0.5;
+    var pos = getShuffleCardsPosition(card);
     for (var y = 0; y < 3; y++) {
         for (var i = 0; i < numPlayers; i++) {
             id = getNextAllAttendeeId(id);
@@ -461,14 +488,14 @@ function animateDealCards(readyFunction) {
             if (id === dealerId) {
                 card = $(dealer2ndStack.children()[y]);
                 props[c] = {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
-                card.css({top: top, left: left});
+                card.css({top: pos.top, left: pos.left});
                 card.hide();
                 cards[c++] = card;
             }
             if (childs.length > 0) {
                 card = $(childs[y]);
                 props[c] = {x: card.css("left"), y: card.css("top"), r: getRotationDegrees(card)};
-                card.css({top: top, left: left});
+                card.css({top: pos.top, left: pos.left});
                 card.hide();
                 cards[c++] = card;
             }
@@ -477,16 +504,16 @@ function animateDealCards(readyFunction) {
     var delay = 400;
     for (var i = 0; i < cards.length; i++) {
         if (i === cards.length - 1) {
-            animateDealSingleCard(cards[i], top, left, props[i], i * delay, readyFunction);
+            animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay, readyFunction);
         }
-        animateDealSingleCard(cards[i], top, left, props[i], i * delay);
+        animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay);
     }
 }
 
 function animateDealSingleCard(card, top, left, props, delay, readyFunction) {
     var distance = Math.abs(calculateDistanceBetweenPoints(left, top, parseFloat(props.x), parseFloat(props.y)));
     var animTime = 1.75 * distance;
-    card.prop("rot", 0);    
+    card.prop("rot", 0);
     var animProps = {
         duration: animTime,
         step: function (now, tween) {
@@ -982,7 +1009,7 @@ function getViewerList(name) {
 function createPlayerClickFunction(player) {
     return function (evt) {
         showPlayerPopup(evt, player);
-    }
+    };
 }
 
 function updateAttendeeList() {
@@ -1085,7 +1112,7 @@ function createAttendeeDesk(player, stackDesk) {
 function getPlayerNameClickFunction(player) {
     return function (evt) {
         showPlayerPopup(evt, player);
-    }
+    };
 }
 
 function updateAttendeeDeskColor() {
@@ -1159,7 +1186,7 @@ function getDealer2ndStackProperties() {
                 x: (Math.random() * (2 * 16)) - 16,
                 y: (Math.random() * (2 * 8)) - 8,
                 r: (Math.random() * (2 * 4)) - 4
-            }
+            };
         }
     }
     return dealer2ndStackProps;
