@@ -197,6 +197,7 @@ function onGamePhaseMessage(message) {
             sound.deal.play();
             animateDealCards(function () {
                 onGamePhase(gamePhase);
+                onMessageBuffer();
             });
             break;
         case "waitForAttendees":
@@ -217,6 +218,7 @@ function onGamePhaseMessage(message) {
 }
 
 function onGamePhase(phase) {
+    log("onGamePhase: " + phase);
     var isDiscover = (phase === "discover");
     var isWaitForAttendees = (phase === "waitForAttendees");
     var meIsMover = (mover === myName);

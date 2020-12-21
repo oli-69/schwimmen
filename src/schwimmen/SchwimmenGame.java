@@ -643,7 +643,7 @@ public class SchwimmenGame extends CardGame {
     private void setGamePhase(GAMEPHASE phase) {
         LOGGER.info("GamePhase: '" + phase + "'");
         this.gamePhase = phase;
-        if( phase == GAMEPHASE.shuffle) {
+        if (phase == GAMEPHASE.shuffle) {
             gameStackProperties.shakeAll();
         }
         firePropertyChange(PROP_GAMEPHASE, null, phase);
