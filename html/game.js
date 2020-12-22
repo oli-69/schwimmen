@@ -61,7 +61,7 @@ function onDocumentReady() {
     $('#pName').focus();
     var loginOnEnter = function (e) {
         if (e.keyCode === 13) {
-            login();
+//            login();
         }
     };
     $('#pName').keyup(loginOnEnter);
@@ -76,6 +76,8 @@ function onDocumentReady() {
         updateAttendeeList();
         updateAttendeeStacks();
         updateCardStack($("#gameStack"), gameStack);
+        setShuffling(false);
+        onGamePhase(gamePhase);
     };
     $(window).on("orientationchange", function () {
         setTimeout(layoutFunction(), 1000);
@@ -1158,7 +1160,13 @@ function updateAttendeeStacks(message) {
                     updateCardStack(desk, isAttendee ? discoverStacks[getAttendeeIdByName(playerName)].cards : undefined);
                 } else {
                     var viewerStack = getViewerStack(playerName);
-                    updateCardStack(desk, isAttendee ? (viewerStack !== undefined ? viewerStack : (gamePhase !== "waitForAttendees" ? coveredStack : undefined)) : undefined);
+                    updateCardStack(desk, isAttendee
+                            ? (viewerStack !== undefined
+                                    ? viewerStack
+                                    : ((gamePhase !== "waitForAttendees" && gamePhase != "shuffle")
+                                            ? coveredStack
+                                            : undefined))
+                            : undefined);
                 }
             } else {
                 updateCardStack(desk, playerStack);
