@@ -110,6 +110,18 @@ public class SchwimmenGameTest {
         assertEquals(player2, attendeeList.get(1));
         assertEquals(player3, attendeeList.get(2));
     }
+    
+    @Test
+    public void testGetNextFinishSoundId() {
+        List<Integer> ids = new ArrayList<>();
+        for( int i=0; i<game.getFinishSoundCount(); i++) {
+            int cursor = game.getNextFinishSoundId();
+            assertFalse(ids.contains(cursor));
+            ids.add(cursor);
+            LOGGER.info("FinishSound: " + cursor);
+        }
+        assertEquals(game.getFinishSoundCount(), ids.size());
+    }
 
     @Test
     public void testDiscover() {

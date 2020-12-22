@@ -1258,8 +1258,12 @@ public class SchwimmenGame extends CardGame {
         return round;
     }
 
+    int getFinishSoundCount() {
+        return 13;
+    }
+
     private void initFinishSoundIds() {
-        int soundCount = 13;
+        int soundCount = getFinishSoundCount();
         List<Integer> soundIDs = new ArrayList<>();
         for (int i = 0; i < soundCount; i++) {
             soundIDs.add(i);
@@ -1274,14 +1278,14 @@ public class SchwimmenGame extends CardGame {
         } else {
             LOGGER.error("Finish Sound IDs initialization failed");
         }
-    }
+    }    
 
-    private int getNextFinishSoundId() {
+    int getNextFinishSoundId() {
         finishSoundIdCursor++;
         if (finishSoundIdCursor >= finishSoundIds.size()) {
             finishSoundIdCursor = 0;
         }
-        return finishSoundIdCursor;
+        return finishSoundIds.get(finishSoundIdCursor);
     }
 
     private void shiftMover() {
