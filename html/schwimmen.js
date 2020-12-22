@@ -107,6 +107,7 @@ function setLoginPageVisible(visible) {
     if (visible) {
         $("#loginPage").show(fadePanelSpeed);
         setWebRadioPlaying(false);
+        setShuffling(false);
     } else {
         $("#loginPage").hide(fadePanelSpeed);
     }
