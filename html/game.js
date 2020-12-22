@@ -1158,7 +1158,7 @@ function updateAttendeeStacks(message) {
                     updateCardStack(desk, isAttendee ? discoverStacks[getAttendeeIdByName(playerName)].cards : undefined);
                 } else {
                     var viewerStack = getViewerStack(playerName);
-                    updateCardStack(desk, isAttendee ? (viewerStack !== undefined ? viewerStack : coveredStack) : undefined);
+                    updateCardStack(desk, isAttendee ? (viewerStack !== undefined ? viewerStack : (gamePhase !== "waitForAttendees" ? coveredStack : undefined)) : undefined);
                 }
             } else {
                 updateCardStack(desk, playerStack);
