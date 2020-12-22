@@ -61,7 +61,7 @@ function onDocumentReady() {
     $('#pName').focus();
     var loginOnEnter = function (e) {
         if (e.keyCode === 13) {
-//            login();
+            login();
         }
     };
     $('#pName').keyup(loginOnEnter);
@@ -456,7 +456,7 @@ function setShuffling(isShuffling) {
             shufflingCard.effect("shake", {distance: shakeAmount, times: shakes}, shakeTime, loopShake);
         }
         loopShake();
-    } else if (!sound.shuffle.paused) {
+    } else if (sound !== undefined && !(sound.shuffle.paused)) {
         sound.shuffle.pause();
         shufflingCard.stop();
         shufflingCard.remove();
@@ -554,15 +554,10 @@ function animateSelectStack(isKeepStack, readyFunction) {
         trashCardProps[i] = getGameStackProperties(i, playerCards[i], gameStack);
     }
 
-    var reAnchorFunction = function () {
-        this.triggered = false;
+    var finishFunction = isKeepStack ? readyFunction : function () {
         gameStack.append(trashCards[0]);
         gameStack.append(trashCards[1]);
         gameStack.append(trashCards[2]);
-        this.triggered = true;
-    };
-
-    var finishFunction = isKeepStack ? readyFunction : function () {
         attendeeStack.prepend(dealer2ndStack[2]);
         attendeeStack.prepend(dealer2ndStack[1]);
         attendeeStack.prepend(dealer2ndStack[0]);
@@ -576,7 +571,7 @@ function animateSelectStack(isKeepStack, readyFunction) {
     var trashCards = isKeepStack ? dealer2ndCards : playerCards;
     animateGiveCard(giveSpeed, trashCards[0], trashCardProps[0], 0);
     animateGiveCard(giveSpeed, trashCards[1], trashCardProps[1], 0);
-    animateGiveCard(giveSpeed, trashCards[2], trashCardProps[2], 0, reAnchorFunction, finishFunction);
+    animateGiveCard(giveSpeed, trashCards[2], trashCardProps[2], 0, finishFunction);
 }
 
 /* New Cards */
