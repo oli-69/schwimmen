@@ -626,19 +626,11 @@ function animateAllCardsSwap(readyFunction) {
         reverseTargetProps[i] = getGameStackProperties(i, gameCards[i], gameStack);
     }
 
-    var reverseAnchorFunction = function () {
-        this.triggered = false;
+    var finish = function () {
+        sound.swap.play();
         gameStack.append(playerCards[0]);
         gameStack.append(playerCards[1]);
         gameStack.append(playerCards[2]);
-        this.triggered = true;
-    };
-
-    var finish = function () {
-        if (!(reverseAnchorFunction.triggered)) {
-            reverseAnchorFunction();
-        }
-        sound.swap.play();
         if (typeof readyFunction === "function") {
             readyFunction();
         }
@@ -648,7 +640,7 @@ function animateAllCardsSwap(readyFunction) {
         var giveSpeed = 1500;
         animateGiveCard(giveSpeed, playerCards[0], reverseTargetProps[0], 0);
         animateGiveCard(giveSpeed, playerCards[1], reverseTargetProps[1], 0);
-        animateGiveCard(giveSpeed, playerCards[2], reverseTargetProps[2], 0, reverseAnchorFunction, finish);
+        animateGiveCard(giveSpeed, playerCards[2], reverseTargetProps[2], 0, finish);
     };
 
     sound.click.play();
@@ -675,50 +667,36 @@ function animateCardSwap(takenId, givenId, readyFunction) {
     var gSvg = $(attendeeStack.children()[givenId]);
     var gProps = {top: gSvg.css("top"), left: gSvg.css("left"), rot: getRotationDegrees(gSvg)};
 
-    var reverseAnchorFunction = function () {
-        this.triggered = false;
+    var finish = function () {
+        sound.swap.play();
         if (gameStackAnchor !== undefined) {
             gSvg.insertBefore(gameStackAnchor);
         } else {
             gameStack.append(gSvg);
         }
-        this.triggered = true;
-    };
-
-    var finish = function () {
-        if (!(reverseAnchorFunction.triggered)) {
-            reverseAnchorFunction();
-        }
-        sound.swap.play();
         if (typeof readyFunction === "function") {
             readyFunction();
         }
     };
     var targetProps = getGameStackProperties(takenId, tSvg, gameStack);
     var reverse = function () {
-        animateGiveCard(1500, gSvg, targetProps, cardFlips[takenId], reverseAnchorFunction, finish);
+        animateGiveCard(1500, gSvg, targetProps, cardFlips[takenId], finish);
     };
     sound.click.play();
     tSvg.insertBefore(gSvg);
     animateTakeCard(2500, tSvg, gProps, reverse);
 }
 
-function animateGiveCard(speed, card, targetProps, cardFlips, reverseAnchorFunction, finish) {
+function animateGiveCard(speed, card, targetProps, cardFlips, finish) {
     var startRot = getRotationDegrees(card);
     var targetRot = targetProps.r;
     targetRot += cardFlips * 360;
-    var triggerVal = 0.5 * (targetRot - startRot);
     card.prop("rot", startRot);
     var animProps = {
         duration: speed,
         step: function (now, tween) {
             if (tween.prop === "rot") {
                 card.css("transform", "rotate(" + now + "deg)");
-                if (reverseAnchorFunction && !(reverseAnchorFunction.triggered)) {
-                    if (Math.abs(tween.start - now) >= triggerVal * (tween.start < tween.end ? 1 : -1)) {
-                        reverseAnchorFunction();
-                    }
-                }
             }
         }
     };
