@@ -132,6 +132,7 @@ public class SchwimmenGame extends CardGame {
     private DiscoverMessage discoverMessage = null;
     private boolean webradioPlaying = true;
     private int finishSoundIdCursor = 0;
+    private int finishSoundId = 0;
 
     /**
      * Default Constructor. Creates an instance of this class.
@@ -467,6 +468,7 @@ public class SchwimmenGame extends CardGame {
         askForViewMap.clear();
         askForShowMap.clear();
         gameLooser = null;
+        finishSoundId = getNextFinishSoundId();
         initRound();
         List<SchwimmenPlayer> offlineAttendees = new ArrayList<>();
         attendees.forEach((attendee) -> {
@@ -688,7 +690,7 @@ public class SchwimmenGame extends CardGame {
             mover = getNextTo(mover);
         }
         discoverMessage = new DiscoverMessage(round.finisher, round.finishScore,
-                round.knocker2, playerStacks, payers, leavers, getNextFinishSoundId());
+                round.knocker2, playerStacks, payers, leavers, finishSoundId);
         setGamePhase(GAMEPHASE.discover);
     }
 
@@ -799,8 +801,8 @@ public class SchwimmenGame extends CardGame {
                 }
             }
         } else if (gamePhase == GAMEPHASE.waitForAttendees) {
-            setGamePhase(GAMEPHASE.shuffle);
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht dran!");
+            startGame(); // <- emergency case
         }
     }
 
@@ -1278,7 +1280,7 @@ public class SchwimmenGame extends CardGame {
         } else {
             LOGGER.error("Finish Sound IDs initialization failed");
         }
-    }    
+    }
 
     int getNextFinishSoundId() {
         finishSoundIdCursor++;
