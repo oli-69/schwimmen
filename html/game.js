@@ -13,6 +13,7 @@ var dealer2ndStackProps;
 var cardFlips = [3];
 var gameDesk;
 var viewerStacks;
+var controlPanel;
 var changeStackAllowed;
 var knockAllowed;
 var attendeesCardStacks = [];
@@ -34,6 +35,7 @@ function onDocumentReady() {
         $("#loginConsole").html("&nbsp;");
     });
     gameDesk = $("#gameDesk");
+    controlPanel = $("#controlPanel");
     shufflingCard = $(getSvgCard(coveredCard).getUI()).clone();
     setGameDialogVisible($("#joinInOutDialog"), false);
     setGameDialogVisible($("#dealCardsDialog"), false);
@@ -249,6 +251,11 @@ function onGamePhase(phase) {
     updateAttendeeDeskColor();
 
     // Control Panel
+    if (meIsMoverInGame) {
+        controlPanel.show();
+    } else {
+        controlPanel.hide();
+    }
     $("#logoffBtn").prop("disabled", !(isWaitForAttendees && isActive));
     $("#swapCardBtn").prop("disabled", !(meIsMoverInGame && isValidSelection));
     $("#swapAllCardsBtn").prop("disabled", !meIsMoverInGame);
@@ -1015,10 +1022,13 @@ function updateAttendeeList() {
             panel.append(attendeeDesk);
             var l = (panel.width() * 0.5) + rx * Math.cos(angle) - (attendeeDesk.outerWidth() >> 1);
             var t = ((panel.height() * 0.5) + ry * Math.sin(angle)
-                    - (1.2 * attendeesCardStacks[id].outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.4 : 1)));
+                    - (1.1 * attendeesCardStacks[id].outerHeight() * ((isSmallSize && otherAttendeesCount > 1) ? 1.4 : 1)));
             attendeeDesk.css({left: l + "px", top: t + "px"});
             if (gamePhase === "dealCards" && player.name === mover) { // add the dealer 2nd stack here
                 createDealer2ndStack(attendeeDesk, panel);
+            }
+            if (id === myId) { // set the control panel position here
+                controlPanel.css({left: l + attendeeDesk.outerWidth() + 4 + "px", top: t + "px"});
             }
             angle += step;
         }
@@ -1276,7 +1286,7 @@ function updateControlPanelMessage() {
             msg = mover + " ist dran";
         }
     }
-    $("#controlPanelMessage").html(msg);
+    $("#bottomPanelMessage").html(msg);
 }
 
 function getNextAttendeeId(currentId) {

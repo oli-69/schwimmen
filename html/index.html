@@ -40,14 +40,8 @@
                 <div id="attendeesPanel"></div>
                 <div id="gameDesk"><div id="gameStack" class="cardStack"></div></div>
                 <div id="playerListPanel"></div>
-                <div id="controlPanel">
-                    <span id="controlPanelMessage"></span><br>
-                    <input type="button" id="swapCardBtn" value="Tausche" onclick="swapCard()"  disabled /> 
-                    <input type="button" id="swapAllCardsBtn" value="Alle tauschen" onclick="swapAllCards()"  disabled /> 
-                    <input type="button" id="passBtn" value="Schieben" onclick="pass()"  disabled /> 
-                    <input type="button" id="knockBtn" value="Klopfen" onclick="knock()"  disabled /> 
-                    <input type="button" id="newCardsBtn" value="Neue Karten" onclick="getNewCards()"  disabled /> 
-                    <input type="button" id="logoffBtn" value="Logout" onclick="logoff()" disabled hidden /><br>
+                <div id="bottomPanel">
+                    <span id="bottomPanelMessage"></span><br>
                     <div id="chatContainer">
                         <div id="chatContainerLeft">
                             <textarea id="chatArea" readonly></textarea>                
@@ -57,8 +51,16 @@
                             <div id="webradio"><input type="range" id="webRadioSlider" onchange="radioVolumeChanged()" value="20"><div id="webRadioBtn" onClick="toogleWebRadio()"></div></div>
                             <input type="button" id="videoBtn" value="Video" onclick="openVideo()" />
                             <input type="button" id="chatBtn" value="Send" onclick="sendChatMessage()" />
+                            <input type="button" id="logoffBtn" value="Logout" onclick="logoff()" disabled hidden />
                         </div>
                     </div>
+                </div>
+                <div id="controlPanel">
+                    <input type="button" id="swapCardBtn" value="Tauschen" onclick="swapCard()"  disabled /> 
+                    <input type="button" id="passBtn" value="Schieben" onclick="pass()"  disabled /> 
+                    <input type="button" id="knockBtn" value="Klopfen" onclick="knock()"  disabled /> 
+                    <input type="button" id="swapAllCardsBtn" value="Tausche 3" onclick="swapAllCards()"  disabled /> 
+                    <input type="button" id="newCardsBtn" value="Neue Karten" onclick="getNewCards()"  disabled /> 
                 </div>
                 <div id="joinInOutDialog">
                     <div>Neues Spiel. Warte auf Mitspieler...</div><br>

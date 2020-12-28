@@ -9,6 +9,33 @@ main {
 }
 
 #controlPanel{
+    position: fixed;
+    background-color: rgba(255,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0.5em;
+    background-color: rgba(0,0,0,0.6);
+    color: white;
+    border-color: darkgray;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+}
+
+#swapCardBtn, #swapAllCardsBtn, #passBtn, #knockBtn, #newCardsBtn{
+    margin-top: 0.75em;
+    margin-bottom: 0.75em;
+    cursor: pointer;
+}
+#swapCardBtn:disabled, #swapAllCardsBtn:disabled, #passBtn:disabled, #knockBtn:disabled, #newCardsBtn:disabled{
+    cursor: default;
+}
+
+#logoffBtn, #chatBtn, #videoBtn{
+}
+
+#bottomPanel{
     text-align: center;
     background-color: rgba(0,0,0,0.4);
     min-width: 100%;
@@ -18,14 +45,9 @@ main {
     padding: 0.2em;
 }
 
-#controlPanelMessage{    
+#bottomPanelMessage{    
     font-size: 1.3em;
     color: white;
-}
-
-#swapCardBtn, #swapAllCardsBtn, #passBtn, #knockBtn, #newCardsBtn, #logoffBtn, #chatBtn{
-    padding: 0px;
-    font-size: 0.8em;
 }
 #chatContainer{
     display: flex;
@@ -334,15 +356,17 @@ main {
     body {
         font-size: 0.9em;
     }
-    #playerListPanel, #controlPanel{
+    #playerListPanel, #bottomPanel{
         background-color: rgba(0,0,0,0.5);
     }
     #attendeesPanel{
         background-image: url('./wood-med.jpg');
     }
-    #swapCardBtn, #swapAllCardsBtn, #passBtn, #knockBtn, #newCardsBtn, #logoffBtn, #chatBtn{
-        margin-top: 0.3em;
-        padding: 0.15em;
+    #swapCardBtn, #swapAllCardsBtn, #passBtn, #knockBtn, #newCardsBtn{
+        margin-top: 0.5em;
+        margin-bottom: 0.5em;    
+    }
+    #logoffBtn, #chatBtn, #videoBtn{
     }
     #chatContainerRight{
         margin-bottom: 0em;        
@@ -384,14 +408,14 @@ main {
     .attendeeName{
         margin-top: 0.5em;
     }
-    #controlPanelMessage{    
+    #bottomPanelMessage{    
         margin-bottom: 3em;
     }
     #chatArea{
         font-size: 0.9em;
         height: 5em;
     }
-    #controlPanel{
+    #bottomPanel{
         padding: 0.4em;
     }
     #joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, 
@@ -407,9 +431,11 @@ main {
         font-size: 1em;
     }
 
-    #swapCardBtn, #swapAllCardsBtn, #passBtn, #knockBtn, #newCardsBtn, #logoffBtn, #chatBtn{
-        margin-top: 0.5em;
-        padding: 0.3em;
+    #swapCardBtn, #swapAllCardsBtn, #passBtn, #knockBtn, #newCardsBtn{
+        margin-top: 0.4em;
+        margin-bottom: 0.4em;        }
+
+    #logoffBtn, #chatBtn, #videoBtn{
     }
 
     .cardStack {
@@ -449,7 +475,7 @@ main {
     .attendeeName{
         margin-top: 1em;
     }
-    #controlPanel{
+    #bottomPanel{
         padding: 0.6em;
     }
     #joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, 
