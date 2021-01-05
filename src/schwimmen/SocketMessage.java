@@ -4,7 +4,7 @@ package schwimmen;
 import com.google.gson.JsonObject;
 
 /**
- * Message from Socket -> Game
+ * Message from Socket to Game
  */
 public class SocketMessage {
     
@@ -16,7 +16,5 @@ public class SocketMessage {
         this.action = action;
         this.jsonString = jsonString;
         this.jsonObject = jsonObject;
-    }
-    
-    
+    }    
 }

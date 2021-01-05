@@ -39,7 +39,10 @@ public class SchwimmenServer {
 
     /**
      * Static main entry point.
-     * @param args the command line arguments. Accepts one argument which is an alternate config path. 
+     *
+     * @param args the command line arguments. Accepts one argument which is an
+     * alternate config path.
+     * @throws java.lang.Exception in case of an Exception.
      */
     public static void main(String[] args) throws Exception {
         LOGGER.info("Starting http server)");
