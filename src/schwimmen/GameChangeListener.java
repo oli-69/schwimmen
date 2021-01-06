@@ -33,6 +33,7 @@ public class GameChangeListener implements PropertyChangeListener {
     }
 
     @Override
+    @SuppressWarnings(value = "unchecked")
     public void propertyChange(PropertyChangeEvent evt) {
         switch (evt.getPropertyName()) {
             case SchwimmenGame.PROP_WEBRADIO_PLAYING:

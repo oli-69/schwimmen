@@ -58,7 +58,7 @@ public class CardGame {
 
     protected void reshuffleStack(List<Card> sourceStack) {
         Random random = new Random(System.currentTimeMillis());
-        List<Card> tempStack = new ArrayList(sourceStack.size());
+        List<Card> tempStack = new ArrayList<>(sourceStack.size());
         tempStack.addAll(sourceStack);
         bigStack.clear();
         while (tempStack.size() > 0) {
