@@ -100,8 +100,11 @@ public class SchwimmenServer {
             }
         }, "Stop HttpServer Hook"));
         new PingWatchdog(game).start();
-        installLookAndFeel();
-        SwingUtilities.invokeLater(() -> new SchwimmenFrame(game).setVisible(true));
+
+        if (Boolean.parseBoolean(settings.getProperty("startUI", "true"))) {
+            installLookAndFeel();
+            SwingUtilities.invokeLater(() -> new SchwimmenFrame(game).setVisible(true));
+        }
     }
 
     private static void installLookAndFeel() {
