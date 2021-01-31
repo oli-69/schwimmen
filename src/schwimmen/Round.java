@@ -1,7 +1,11 @@
 package schwimmen;
 
+import cardgame.Card;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import schwimmen.SchwimmenGame.GAMERULE;
 import schwimmen.SchwimmenGame.MOVE;
 import schwimmen.messages.PlayerMove;
 
@@ -19,7 +23,8 @@ public class Round {
     public int moveCount; // counter used by game rules.
     public List<SchwimmenPlayer> leavers = new ArrayList<>(); // leavers after this round, meaning payed and death
 
-    private final List<SchwimmenPlayer> passers = new ArrayList<>(); // list of players passing in a row (used by game rules)
+    private final List<SchwimmenPlayer> passSequence = new ArrayList<>(); // list of players passing in a row (used by game rules)
+    private final Set<SchwimmenPlayer> passers = new HashSet<>(); // list of players having passed once in this round (used by game rules)
     private final SchwimmenGame game; // reference to the game.
 
     /**
@@ -41,6 +46,7 @@ public class Round {
         finisher = null;
         knocker1 = null;
         knocker2 = null;
+        passSequence.clear();
         passers.clear();
         finishScore = 0f;
         moveCount = 0;
@@ -54,7 +60,7 @@ public class Round {
      */
     public void setPlayerMove(PlayerMove move) {
         if (!MOVE.pass.toString().equals(move.move)) {
-            passers.clear(); // the row was interrupted
+            passSequence.clear(); // the row was interrupted
         }
         if (!MOVE.changeStack.toString().equals(move.move)) {
             moveCount++;
@@ -67,6 +73,7 @@ public class Round {
      * @param player current player.
      */
     public void pass(SchwimmenPlayer player) {
+        passSequence.add(player);
         passers.add(player);
     }
 
@@ -77,7 +84,7 @@ public class Round {
      * @return the number of passers in a row.
      */
     public int getPassCount() {
-        return passers.size();
+        return passSequence.size();
     }
 
     /**
@@ -93,14 +100,27 @@ public class Round {
      * Getter for property changeStackAllowed.
      *
      * @param player the player for which it is asked for.
+     * @param gameStack the cards in the middle
      * @return true it the specified player is allowed to change the stack (get
-     * new cards if all players passed in a row), false otherwise.
+     * new cards if all players passed in a row, or the 7-8-9 rule), false
+     * otherwise.
      */
-    public boolean isChangeStackAllowed(SchwimmenPlayer player) {
-        return !passers.isEmpty()
-                && !(passers.size() < game.getAttendeesCount())
-                && player.equals(game.getMover()
-                );
+    public boolean isChangeStackAllowed(SchwimmenPlayer player, List<Card> gameStack) {
+        boolean allPlayersPassed = !passSequence.isEmpty() && !(passSequence.size() < game.getAttendeesCount());
+        boolean is_7_8_9 = game.is7_8_9(gameStack) && game.isGameRuleEnabled(GAMERULE.newCardsOn789);
+        return player.equals(game.getMover()) && (allPlayersPassed || is_7_8_9);
+    }
+
+    /**
+     * Getter for property passAllowed
+     *
+     * @param player the player for which it is asked for.
+     * @return true it the specified player is allowed to pass. Can be false, if
+     * the game rule pass-once is enabled.
+     */
+    public boolean isPassAllowed(SchwimmenPlayer player) {
+        boolean isAllowed = (!game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound)) || !passers.contains(player);
+        return player.equals(game.getMover()) && isAllowed;
     }
 
     /**

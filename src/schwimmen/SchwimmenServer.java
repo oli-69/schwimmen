@@ -23,6 +23,7 @@ import org.eclipse.jetty.websocket.server.WebSocketUpgradeFilter;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
+import schwimmen.SchwimmenGame.GAMERULE;
 import schwimmen.ui.SchwimmenFrame;
 
 /**
@@ -101,6 +102,9 @@ public class SchwimmenServer {
         }, "Stop HttpServer Hook"));
         new PingWatchdog(game).start();
 
+        game.setWebRadioPlaying(Boolean.parseBoolean(settings.getProperty("webradioEnabled", "true")));
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, Boolean.parseBoolean(settings.getProperty("rule789Enabled", "false")));
+        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, Boolean.parseBoolean(settings.getProperty("rulePassOnceEnabled", "false")));
         if (Boolean.parseBoolean(settings.getProperty("startUI", "true"))) {
             installLookAndFeel();
             SwingUtilities.invokeLater(() -> new SchwimmenFrame(game).setVisible(true));

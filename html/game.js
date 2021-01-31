@@ -16,6 +16,7 @@ var viewerStacks;
 var controlPanel;
 var changeStackAllowed;
 var knockAllowed;
+var passAllowed;
 var attendeesCardStacks = [];
 var dealer2ndStack;
 var coveredCard = {color: -1, value: -1};
@@ -128,6 +129,7 @@ function onGameState(message) {
     viewerStacks = message.viewerStackList.viewerStacks;
     changeStackAllowed = message.changeStackAllowed;
     knockAllowed = message.knockAllowed;
+    passAllowed = message.passAllowed;
     updatePlayerList();
     updateAttendeeList();
     updateAttendeeStacks(message);
@@ -187,6 +189,7 @@ function onGamePhaseMessage(message) {
     mover = undefined;
     changeStackAllowed = message.changeStackAllowed;
     knockAllowed = message.knockAllowed;
+    passAllowed = message.passAllowed;
     gamePhase = message.phase;
     mover = message.actor;
     switch (gamePhase) {
@@ -259,7 +262,7 @@ function onGamePhase(phase) {
     $("#logoffBtn").prop("disabled", !(isWaitForAttendees && isActive));
     $("#swapCardBtn").prop("disabled", !(meIsMoverInGame && isValidSelection));
     $("#swapAllCardsBtn").prop("disabled", !meIsMoverInGame);
-    $("#passBtn").prop("disabled", !meIsMoverInGame);
+    $("#passBtn").prop("disabled", !(meIsMoverInGame && passAllowed));
     $("#knockBtn").prop("disabled", !(meIsMoverInGame && knockAllowed));
     $("#newCardsBtn").prop("disabled", !(meIsMoverInGame && changeStackAllowed));
 

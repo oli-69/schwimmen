@@ -68,7 +68,7 @@ public class GameChangeListener implements PropertyChangeListener {
             case moveResult:
                 return new GamePhase(game.getPlayertMove(), actor);
             case waitForPlayerMove:
-                return new GamePhase(phase, actor, game.isChangeStackAllowed(actor), game.isKnockAllowed());
+                return new GamePhase(phase, actor, game.isChangeStackAllowed(actor), game.isKnockAllowed(), game.isPassAllowed(actor));
             case shuffle:
                 return new GamePhase(phase, actor, game.getAllAttendees());
             default:

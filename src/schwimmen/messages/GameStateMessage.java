@@ -18,13 +18,14 @@ public class GameStateMessage {
     public ViewerStackList viewerStackList;
     public boolean changeStackAllowed;
     public boolean knockAllowed;
+    public boolean passAllowed;
     public CardStack[] discoverStacks;
     public boolean webradioPlaying;
 
     public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
             Map<SchwimmenPlayer, List<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack, 
             List<cardgame.Card> playerStack, ViewerStackList viewerStackList, boolean changeStackAllowed, boolean knockAllowed, 
-            List<DiscoverStack> discoverStacks, boolean webradioPlaying) {
+            boolean passAllowed, List<DiscoverStack> discoverStacks, boolean webradioPlaying) {
         this.phase = phase;
         this.playerList = new PlayerList(players);
         this.attendeeList = new AttendeeList(attendees, allAttendees, mover);
@@ -35,6 +36,7 @@ public class GameStateMessage {
         this.viewerStackList = viewerStackList;
         this.changeStackAllowed = changeStackAllowed;
         this.knockAllowed = knockAllowed;
+        this.passAllowed = passAllowed;
         if (discoverStacks != null) {
             this.discoverStacks = discoverStacks.toArray(new DiscoverStack[discoverStacks.size()]);
         }

@@ -1,4 +1,3 @@
-
 package schwimmen.ui;
 
 import java.awt.Component;
@@ -15,10 +14,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import schwimmen.SchwimmenGame;
 import schwimmen.SchwimmenGame.GAMEPHASE;
+import schwimmen.SchwimmenGame.GAMERULE;
 import schwimmen.SchwimmenPlayer;
 
 /**
- * Implements the main panel for the server side GUI. Created with NetBeans GUI Editor.
+ * Implements the main panel for the server side GUI. Created with NetBeans GUI
+ * Editor.
  */
 public class GamePanel extends javax.swing.JPanel {
 
@@ -37,7 +38,9 @@ public class GamePanel extends javax.swing.JPanel {
         this.game = game;
         this.game.addPropertyChangeListener(this::gamePropertyChanged);
         playerList.setCellRenderer(new PlayerRenderer());
-        rbWebRadioOn.setSelected(game.isWebradioPlaying());
+        cbWebradio.setSelected(game.isWebradioPlaying());
+        cbRule789.setSelected(game.isGameRuleEnabled(GAMERULE.newCardsOn789));
+        cbRulePassOnce.setSelected(game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound));
     }
 
     private ListModel<SchwimmenPlayer> getListPlayerListModel() {
@@ -80,6 +83,9 @@ public class GamePanel extends javax.swing.JPanel {
     }
 
     private void initGamePhase(GAMEPHASE phase) {
+        boolean changeRuleAllowd = phase == GAMEPHASE.waitForAttendees || phase == GAMEPHASE.shuffle || phase == GAMEPHASE.discover;
+        cbRule789.setEnabled(changeRuleAllowd);
+        cbRulePassOnce.setEnabled(changeRuleAllowd);
         startGameBtn.setEnabled(phase == GAMEPHASE.waitForAttendees);
         stopGameBtn.setEnabled(phase != GAMEPHASE.waitForAttendees);
     }
@@ -107,21 +113,25 @@ public class GamePanel extends javax.swing.JPanel {
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
+        java.awt.GridBagConstraints gridBagConstraints;
 
         bgWebRario = new javax.swing.ButtonGroup();
         pmPlayers = new javax.swing.JPopupMenu();
         miRemoveFromAttendees = new javax.swing.JMenuItem();
         miKick = new javax.swing.JMenuItem();
+        bgRule789 = new javax.swing.ButtonGroup();
+        bgRulePassOnce = new javax.swing.ButtonGroup();
         playerListScrollPanel = new javax.swing.JScrollPane();
         playerList = new javax.swing.JList<>();
         southPanel = new javax.swing.JPanel();
         buttonPanel = new javax.swing.JPanel();
         startGameBtn = new javax.swing.JButton();
         stopGameBtn = new javax.swing.JButton();
-        webradioPanel = new javax.swing.JPanel();
-        lblWebRadio = new javax.swing.JLabel();
-        rbWebRadioOn = new javax.swing.JRadioButton();
-        rbWebRadioOff = new javax.swing.JRadioButton();
+        settingsPanel = new javax.swing.JPanel();
+        cbWebradio = new javax.swing.JCheckBox();
+        cbRule789 = new javax.swing.JCheckBox();
+        cbRulePassOnce = new javax.swing.JCheckBox();
+        layoutDummy = new javax.swing.JPanel();
 
         miRemoveFromAttendees.setText("Remove from Attendees");
         miRemoveFromAttendees.addActionListener(new java.awt.event.ActionListener() {
@@ -174,26 +184,50 @@ public class GamePanel extends javax.swing.JPanel {
 
         southPanel.add(buttonPanel);
 
-        lblWebRadio.setText("Webradio");
-        webradioPanel.add(lblWebRadio);
+        add(southPanel, java.awt.BorderLayout.PAGE_END);
 
-        bgWebRario.add(rbWebRadioOn);
-        rbWebRadioOn.setSelected(true);
-        rbWebRadioOn.setText("on");
-        rbWebRadioOn.addItemListener(new java.awt.event.ItemListener() {
-            public void itemStateChanged(java.awt.event.ItemEvent evt) {
-                rbWebRadioOnItemStateChanged(evt);
+        settingsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Settings"));
+        settingsPanel.setLayout(new java.awt.GridBagLayout());
+
+        cbWebradio.setText("Webradio");
+        cbWebradio.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cbWebradioActionPerformed(evt);
             }
         });
-        webradioPanel.add(rbWebRadioOn);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        settingsPanel.add(cbWebradio, gridBagConstraints);
 
-        bgWebRario.add(rbWebRadioOff);
-        rbWebRadioOff.setText("off");
-        webradioPanel.add(rbWebRadioOff);
+        cbRule789.setText("Rule 789");
+        cbRule789.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cbRule789ActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        settingsPanel.add(cbRule789, gridBagConstraints);
 
-        southPanel.add(webradioPanel);
+        cbRulePassOnce.setText("Rule Pass-Once");
+        cbRulePassOnce.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cbRulePassOnceActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        settingsPanel.add(cbRulePassOnce, gridBagConstraints);
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
+        gridBagConstraints.weighty = 1.0;
+        settingsPanel.add(layoutDummy, gridBagConstraints);
 
-        add(southPanel, java.awt.BorderLayout.PAGE_END);
+        add(settingsPanel, java.awt.BorderLayout.EAST);
     }// </editor-fold>//GEN-END:initComponents
 
     private void startGameBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startGameBtnActionPerformed
@@ -211,14 +245,10 @@ public class GamePanel extends javax.swing.JPanel {
         }
     }//GEN-LAST:event_stopGameBtnActionPerformed
 
-    private void rbWebRadioOnItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_rbWebRadioOnItemStateChanged
-            game.setWebRadioPlaying(rbWebRadioOn.isSelected());
-    }//GEN-LAST:event_rbWebRadioOnItemStateChanged
-
     private void playerListMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_playerListMouseClicked
-        if( evt.getButton() == MouseEvent.BUTTON3) {
+        if (evt.getButton() == MouseEvent.BUTTON3) {
             SchwimmenPlayer selectedPlayer = playerList.getSelectedValue();
-            if( selectedPlayer != null ){
+            if (selectedPlayer != null) {
                 boolean isWaitForAttendees = game.getGamePhase() == GAMEPHASE.waitForAttendees;
                 boolean isAttendee = game.isAttendee(selectedPlayer);
                 miRemoveFromAttendees.setEnabled(isWaitForAttendees && isAttendee);
@@ -235,21 +265,36 @@ public class GamePanel extends javax.swing.JPanel {
         playerList.getSelectedValue().getSocket().close();
     }//GEN-LAST:event_miKickActionPerformed
 
+    private void cbWebradioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbWebradioActionPerformed
+        game.setWebRadioPlaying(cbWebradio.isSelected());
+    }//GEN-LAST:event_cbWebradioActionPerformed
+
+    private void cbRule789ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbRule789ActionPerformed
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, cbRule789.isSelected());
+    }//GEN-LAST:event_cbRule789ActionPerformed
+
+    private void cbRulePassOnceActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbRulePassOnceActionPerformed
+        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, cbRulePassOnce.isSelected());
+    }//GEN-LAST:event_cbRulePassOnceActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.ButtonGroup bgRule789;
+    private javax.swing.ButtonGroup bgRulePassOnce;
     private javax.swing.ButtonGroup bgWebRario;
     private javax.swing.JPanel buttonPanel;
-    private javax.swing.JLabel lblWebRadio;
+    private javax.swing.JCheckBox cbRule789;
+    private javax.swing.JCheckBox cbRulePassOnce;
+    private javax.swing.JCheckBox cbWebradio;
+    private javax.swing.JPanel layoutDummy;
     private javax.swing.JMenuItem miKick;
     private javax.swing.JMenuItem miRemoveFromAttendees;
     private javax.swing.JList<SchwimmenPlayer> playerList;
     private javax.swing.JScrollPane playerListScrollPanel;
     private javax.swing.JPopupMenu pmPlayers;
-    private javax.swing.JRadioButton rbWebRadioOff;
-    private javax.swing.JRadioButton rbWebRadioOn;
+    private javax.swing.JPanel settingsPanel;
     private javax.swing.JPanel southPanel;
     private javax.swing.JButton startGameBtn;
     private javax.swing.JButton stopGameBtn;
-    private javax.swing.JPanel webradioPanel;
     // End of variables declaration//GEN-END:variables
 }

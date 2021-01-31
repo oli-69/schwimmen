@@ -10,9 +10,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import schwimmen.messages.AskForCardShow;
@@ -34,6 +36,22 @@ import schwimmen.messages.ViewerStackList;
 public class SchwimmenGame extends CardGame {
 
     private static final Logger LOGGER = LogManager.getLogger(SchwimmenGame.class);
+
+    /**
+     * Enumeration of optional game rules
+     */
+    public static enum GAMERULE {
+        /**
+         * This game rule enables the active player to select "new cards" if the
+         * gamestack contains 7, 8 and 9.
+         */
+        newCardsOn789,
+        /**
+         * This game rule enables the playeres are allowed to pass only once per
+         * round
+         */
+        passOnlyOncePerRound
+    }
 
     /**
      * Enumeration of the game phases.
@@ -107,6 +125,7 @@ public class SchwimmenGame extends CardGame {
     public static final String PROP_PLAYER_ONLINE = "playerOnline";
     public static final String PROP_VIEWER_MAP = "viewerMap";
     public static final String PROP_WEBRADIO_PLAYING = "webradioPlaying";
+    public static final String PROP_GAMERULE = "gameRule";
 
     private final PlayerIdComparator playerIdComparator;
     private final List<SchwimmenPlayer> players; // List of all players in the room
@@ -123,6 +142,7 @@ public class SchwimmenGame extends CardGame {
     private final Round round;
     private final List<Integer> finishSoundIds;
     private final String videoRoomName;
+    private final Set<GAMERULE> gameRules;
 
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
     private int[] allAttendees; // IDs of players at start of the game (alive + death).
@@ -167,8 +187,9 @@ public class SchwimmenGame extends CardGame {
         askForViewMap = new HashMap<>();
         askForShowMap = new HashMap<>();
         this.gameStack = gameStack;
-        this.dealerStack = Collections.synchronizedList(new ArrayList<>());
-        this.gameStackProperties = new GameStackProperties(gameStack);
+        dealerStack = Collections.synchronizedList(new ArrayList<>());
+        gameStackProperties = new GameStackProperties(gameStack);
+        gameRules = new HashSet<>();
         playerListener = this::playerPropertyChanged;
         round = new Round(this);
         gson = new Gson();
@@ -176,6 +197,38 @@ public class SchwimmenGame extends CardGame {
         initFinishSoundIds();
         videoRoomName = conferenceName;
         super.addPropertyChangeListener(new GameChangeListener(this));
+    }
+
+    /**
+     * Enable or disable a game rule.
+     *
+     * @param rule the rule to enable/disable.
+     * @param enabled true to enable the rule, false otherwise.
+     */
+    public void setGameRuleEnabled(GAMERULE rule, boolean enabled) {
+        if (gamePhase == GAMEPHASE.waitForAttendees
+                || gamePhase == GAMEPHASE.shuffle
+                || gamePhase == GAMEPHASE.discover) {
+            boolean oldVal = isGameRuleEnabled(rule);
+            if (enabled) {
+                gameRules.add(rule);
+            } else {
+                gameRules.remove(rule);
+            }
+            firePropertyChange(PROP_GAMERULE, oldVal, enabled);
+        } else {
+            throw new IllegalArgumentException("Game must be in pahse 'waitForAttendees', 'shuffle', or 'discover'");
+        }
+    }
+
+    /**
+     * Getter for property game rule enabled.
+     *
+     * @param rule the game rule to ask for.
+     * @return true if the game rule is enabled, false otherwise.
+     */
+    public boolean isGameRuleEnabled(GAMERULE rule) {
+        return gameRules.contains(rule);
     }
 
     /**
@@ -323,8 +376,8 @@ public class SchwimmenGame extends CardGame {
             }
         }
         return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
-                gameStackProperties.getGameStack(), player.getStack(), getViewerStackList(player), isChangeStackAllowed(player), isKnockAllowed(),
-                discoverStacks, webradioPlaying);
+                gameStackProperties.getGameStack(), player.getStack(), getViewerStackList(player), isChangeStackAllowed(player),
+                isKnockAllowed(), isPassAllowed(player), discoverStacks, webradioPlaying);
     }
 
     /**
@@ -426,7 +479,17 @@ public class SchwimmenGame extends CardGame {
      * middle), false otherwise.
      */
     public boolean isChangeStackAllowed(SchwimmenPlayer player) {
-        return round != null && round.isChangeStackAllowed(player);
+        return round != null && round.isChangeStackAllowed(player, gameStack);
+    }
+
+    /**
+     * Getter for property PassAllowed.
+     *
+     * @param player the player for which it is asked for.
+     * @return true if the player is allowed to pass, false otherwise.
+     */
+    public boolean isPassAllowed(SchwimmenPlayer player) {
+        return round != null && round.isPassAllowed(player);
     }
 
     /**
@@ -779,14 +842,14 @@ public class SchwimmenGame extends CardGame {
                             players.forEach(p -> p.reset());
                             players.forEach(p -> p.getSocket().sendString(gson.toJson(
                                     new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
-                                            gameStackProperties.getGameStack(), new ArrayList<>(), new ViewerStackList(), false, false, null, webradioPlaying))));
+                                            gameStackProperties.getGameStack(), new ArrayList<>(), new ViewerStackList(), false, false, false, null, webradioPlaying))));
                             setGamePhase(GAMEPHASE.waitForAttendees);
                         } else {
                             players.forEach(p -> {
                                 p.getStack().clear();
                                 p.getSocket().sendString(gson.toJson(
                                         new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
-                                                gameStackProperties.getGameStack(), new ArrayList<>(), new ViewerStackList(), false, false, null, webradioPlaying)));
+                                                gameStackProperties.getGameStack(), new ArrayList<>(), new ViewerStackList(), false, false, false, null, webradioPlaying)));
                             }
                             );
                             setGamePhase(GAMEPHASE.shuffle);
@@ -958,9 +1021,13 @@ public class SchwimmenGame extends CardGame {
     private void processPass(SchwimmenPlayer player) {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.waitForPlayerMove) {
-                round.pass(player);
-                setPlayerMove(new PlayerMove(MOVE.pass, round.getPassCount(), gameStackProperties.getGameStack()));
-                stepGamePhase();
+                if (isPassAllowed(player)) {
+                    round.pass(player);
+                    setPlayerMove(new PlayerMove(MOVE.pass, round.getPassCount(), gameStackProperties.getGameStack()));
+                    stepGamePhase();
+                } else {
+                    LOGGER.warn("Spieler '" + player.getName() + "' " + " darf nicht schieben!");
+                }
             } else {
                 LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForPlayerMove));
             }
@@ -1254,6 +1321,20 @@ public class SchwimmenGame extends CardGame {
         return false;
         // disabled this, since the next player must have the chance to make fire, even if there is 31 in the game stack.
         // return  (isFinishStack(gameStack, getNextTo(mover)));
+    }
+
+    // search the stack for 7-8-9
+    boolean is7_8_9(List<Card> cards) {
+        return containsValue(cards, 7)
+                && containsValue(cards, 8)
+                && containsValue(cards, 9);
+    }
+
+    boolean containsValue(List<Card> cards, int value) {
+        if (cards.stream().anyMatch((card) -> (card.getValue() == value))) {
+            return true;
+        }
+        return false;
     }
 
     Round getRound() { // for unit testing

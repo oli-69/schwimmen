@@ -12,6 +12,7 @@ public class GamePhase {
     public DiscoverMessage discoverMessage;
     public boolean changeStackAllowed;
     public boolean knockAllowed;
+    public boolean passAllowed;
     public int[] allAttendees;
 
     public GamePhase(GAMEPHASE phase) {
@@ -19,7 +20,7 @@ public class GamePhase {
     }
 
     public GamePhase(GAMEPHASE phase, SchwimmenPlayer actor) {
-        this(phase, actor, false, false);
+        this(phase, actor, false, false, true);
     }
 
     public GamePhase(GAMEPHASE phase, SchwimmenPlayer actor, int[] allAttendees) {
@@ -27,11 +28,12 @@ public class GamePhase {
         this.allAttendees = allAttendees;
     }
 
-    public GamePhase(GAMEPHASE phase, SchwimmenPlayer actor, boolean changeStackAllowed, boolean knockAllowed) {
+    public GamePhase(GAMEPHASE phase, SchwimmenPlayer actor, boolean changeStackAllowed, boolean knockAllowed, boolean passAllowed) {
         this.phase = phase.name();
         this.actor = actor != null ? actor.getName() : "";
         this.changeStackAllowed = changeStackAllowed;
         this.knockAllowed = knockAllowed;
+        this.passAllowed = passAllowed;
     }
 
     public GamePhase(PlayerMove move, SchwimmenPlayer actor) {

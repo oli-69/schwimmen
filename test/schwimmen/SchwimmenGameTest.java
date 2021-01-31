@@ -21,6 +21,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
 import schwimmen.SchwimmenGame.GAMEPHASE;
+import schwimmen.SchwimmenGame.GAMERULE;
 import schwimmen.SchwimmenGame.MOVE;
 import schwimmen.messages.AskForCardShow;
 import schwimmen.messages.AskForCardView;
@@ -110,11 +111,11 @@ public class SchwimmenGameTest {
         assertEquals(player2, attendeeList.get(1));
         assertEquals(player3, attendeeList.get(2));
     }
-    
+
     @Test
     public void testGetNextFinishSoundId() {
         List<Integer> ids = new ArrayList<>();
-        for( int i=0; i<game.getFinishSoundCount(); i++) {
+        for (int i = 0; i < game.getFinishSoundCount(); i++) {
             int cursor = game.getNextFinishSoundId();
             assertFalse(ids.contains(cursor));
             ids.add(cursor);
@@ -523,6 +524,51 @@ public class SchwimmenGameTest {
     }
 
     @Test
+    public void testIs_7_8_9() {
+        // Test Kreuz 25
+        List<Card> cards = new ArrayList<>();
+        make25(cards);
+        assertFalse(game.is7_8_9(cards));
+
+        // Test 7,8,9
+        make7_8_9(cards);
+        assertTrue(game.is7_8_9(cards));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testEnableGameRules_fail() {
+        // test in wrong game phase
+        startWith3Players();
+        socket1.onText("{\"action\": \"dealCards\"}");
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, true);
+    }
+
+    @Test
+    public void testEnableGameRules() {
+        assertFalse(game.isGameRuleEnabled(GAMERULE.newCardsOn789));
+        assertFalse(game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound));
+
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, true);
+        assertTrue(game.isGameRuleEnabled(GAMERULE.newCardsOn789));
+        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, true);
+        assertTrue(game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound));
+
+        // add a second time, then remove. Game rule must be disabled
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, true);
+        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, true);
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, false);
+        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, false);
+        assertFalse(game.isGameRuleEnabled(GAMERULE.newCardsOn789));
+        assertFalse(game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound));
+
+        // remove a second time. Must not result in an exception
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, false);
+        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, false);
+        assertFalse(game.isGameRuleEnabled(GAMERULE.newCardsOn789));
+        assertFalse(game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound));
+    }
+
+    @Test
     public void testGetAttendeesCount() {
         assertEquals(0, game.getAttendeesCount());
         login(player1);
@@ -620,6 +666,25 @@ public class SchwimmenGameTest {
     }
 
     @Test
+    public void testIsChangeStackAllowedOn789() {
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, true);
+        startWith2Players();
+        socket1.onText("{\"action\": \"dealCards\"}");
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");
+        assertFalse(game.isChangeStackAllowed(player1));
+        assertFalse(game.isChangeStackAllowed(player2));
+
+        // tauscht
+        swapCard(socket2);
+        assertFalse(game.isChangeStackAllowed(player1));
+        assertFalse(game.isChangeStackAllowed(player2));
+        
+        make7_8_9(gameStack);
+        assertTrue(game.isChangeStackAllowed(player1));
+        assertFalse(game.isChangeStackAllowed(player2));
+    }
+
+    @Test
     public void testIsKnockAllowed() {
         startWith2Players();
         socket1.onText("{\"action\": \"dealCards\"}");
@@ -627,6 +692,49 @@ public class SchwimmenGameTest {
         assertFalse(game.isKnockAllowed());
         swapCard(socket2);
         assertTrue(game.isKnockAllowed());
+    }
+
+    @Test
+    public void testIsPassAllowed() {
+        startWith2Players();
+        socket1.onText("{\"action\": \"dealCards\"}");
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");
+        assertFalse(game.isPassAllowed(player1));
+        assertTrue(game.isPassAllowed(player2));
+        pass(socket2);
+        assertTrue(game.isPassAllowed(player1));
+        assertFalse(game.isPassAllowed(player2));
+        swapCard(socket1);
+        assertFalse(game.isPassAllowed(player1));
+        assertTrue(game.isPassAllowed(player2));
+        pass(socket2);
+        assertTrue(game.isPassAllowed(player1));
+        assertFalse(game.isPassAllowed(player2));
+    }
+
+    @Test
+    public void testIsPassAllowedOnPassOnce() {
+        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, true);
+        startWith2Players();
+        socket1.onText("{\"action\": \"dealCards\"}");
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");
+        assertFalse(game.isPassAllowed(player1));
+        assertTrue(game.isPassAllowed(player2));
+        pass(socket2);
+        assertTrue(game.isPassAllowed(player1));
+        assertFalse(game.isPassAllowed(player2));
+        swapCard(socket1);
+        assertFalse(game.isPassAllowed(player1));
+        assertFalse(game.isPassAllowed(player2));
+        swapCard(socket2);
+        assertTrue(game.isPassAllowed(player1));
+        assertFalse(game.isPassAllowed(player2));
+        pass(socket1);
+        assertFalse(game.isPassAllowed(player1));
+        assertFalse(game.isPassAllowed(player2));
+        swapCard(socket2);
+        assertFalse(game.isPassAllowed(player1));
+        assertFalse(game.isPassAllowed(player2));
     }
 
     @Test
@@ -889,7 +997,7 @@ public class SchwimmenGameTest {
     }
 
     @Test
-    
+
     public void testStopCardShowing_fail_invalidPlayer() {
         startWith5Players();
         game.getRound().leavers.add(player1);
@@ -997,6 +1105,13 @@ public class SchwimmenGameTest {
         cards.add(new Card(1, 14));
         cards.add(new Card(2, 14));
         cards.add(new Card(3, 14));
+    }
+
+    private void make7_8_9(List<Card> cards) {
+        cards.clear();
+        cards.add(new Card(1, 7));
+        cards.add(new Card(2, 8));
+        cards.add(new Card(3, 9));
     }
 
     private void pass(TestSocket socket) {
