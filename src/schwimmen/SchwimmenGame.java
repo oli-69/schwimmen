@@ -722,7 +722,7 @@ public class SchwimmenGame extends CardGame {
         if (isFinishStackExists()) {
             discover();
         } else {
-            if (round.getKnockCount() == 1 && getNextTo(mover).equals(round.knocker1)) {
+            if (shiftMover && round.getKnockCount() == 1 && getNextTo(mover).equals(round.knocker1)) {
                 round.knock(round.knocker1); // round completed after 1th knock
             }
             if (round.getKnockCount() > 1) {

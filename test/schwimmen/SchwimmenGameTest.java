@@ -678,7 +678,7 @@ public class SchwimmenGameTest {
         swapCard(socket2);
         assertFalse(game.isChangeStackAllowed(player1));
         assertFalse(game.isChangeStackAllowed(player2));
-        
+
         make7_8_9(gameStack);
         assertTrue(game.isChangeStackAllowed(player1));
         assertFalse(game.isChangeStackAllowed(player2));
@@ -997,7 +997,6 @@ public class SchwimmenGameTest {
     }
 
     @Test
-
     public void testStopCardShowing_fail_invalidPlayer() {
         startWith5Players();
         game.getRound().leavers.add(player1);
@@ -1062,6 +1061,31 @@ public class SchwimmenGameTest {
         assertEquals("gamePhase", stopResult.action);
         assertEquals("waitForAttendees", stopResult.phase);
         assertEquals(player1.getName(), stopResult.actor);
+    }
+
+    // Debug the Problem that the game discovered automatically when the last 
+    // player in a knocked round changed 789
+    @Test
+    public void testNewCardOn789_knocked() {
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, true);
+        startWith3Players();
+        make7_8_9(player1.getStack());
+        make7_8_9(player2.getStack());
+        make7_8_9(player3.getStack());
+        socket1.onText("{\"action\": \"dealCards\"}");
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");        
+        swapCard(socket2);
+        swapCard(socket3);
+        socket1.onText("{\"action\": \"knock\"}"); // klopft
+        swapCard(socket2);
+        make7_8_9(gameStack);   
+        assertTrue(game.isChangeStackAllowed(player3));
+        socket3.onText("{\"action\": \"changeStack\"}"); // neue Karten bei 7/8/9
+        GamePhase gamePhase = gson.fromJson(socket1.lastMessage(), GamePhase.class);
+        assertEquals("waitForPlayerMove", gamePhase.phase); // player 3 must still be the mover
+        pass(socket3);
+        gamePhase = gson.fromJson(socket1.lastMessage(), GamePhase.class);
+        assertEquals("discover", gamePhase.phase);
     }
 
     private void make21(List<Card> cards) {
