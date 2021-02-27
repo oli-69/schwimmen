@@ -33,14 +33,6 @@ public class Player {
         stack.clear();
     }
 
-    public void addToStack(Card card) {
-        stack.add(card);
-    }
-
-    public void addToStack(List<Card> cards) {
-        stack.addAll(cards);
-    }
-
     public List<Card> getStack() {
         return stack;
     }

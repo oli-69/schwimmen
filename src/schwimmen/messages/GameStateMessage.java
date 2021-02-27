@@ -1,5 +1,6 @@
 package schwimmen.messages;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import schwimmen.SchwimmenPlayer;
@@ -20,12 +21,19 @@ public class GameStateMessage {
     public boolean knockAllowed;
     public boolean passAllowed;
     public CardStack[] discoverStacks;
+    public Finish31OnDealMessage finish31OnDealMessage;
     public boolean webradioPlaying;
 
     public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
-            Map<SchwimmenPlayer, List<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack, 
-            List<cardgame.Card> playerStack, ViewerStackList viewerStackList, boolean changeStackAllowed, boolean knockAllowed, 
-            boolean passAllowed, List<DiscoverStack> discoverStacks, boolean webradioPlaying) {
+            Map<SchwimmenPlayer, List<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack, boolean webradioPlaying) {
+        this(phase, players, attendees, allAttendees, viewerMap, mover, gameStack,
+                new ArrayList<>(), new ViewerStackList(), false, false, false, null, null, webradioPlaying);
+    }
+
+    public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
+            Map<SchwimmenPlayer, List<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack,
+            List<cardgame.Card> playerStack, ViewerStackList viewerStackList, boolean changeStackAllowed, boolean knockAllowed,
+            boolean passAllowed, List<DiscoverStack> discoverStacks, Finish31OnDealMessage finish31OnDealMessage, boolean webradioPlaying) {
         this.phase = phase;
         this.playerList = new PlayerList(players);
         this.attendeeList = new AttendeeList(attendees, allAttendees, mover);
@@ -40,6 +48,7 @@ public class GameStateMessage {
         if (discoverStacks != null) {
             this.discoverStacks = discoverStacks.toArray(new DiscoverStack[discoverStacks.size()]);
         }
+        this.finish31OnDealMessage = finish31OnDealMessage;
         this.webradioPlaying = webradioPlaying;
     }
 }

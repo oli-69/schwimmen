@@ -7,6 +7,7 @@ function SoundFiles() {
     this.offline = new Audio();
     this.shuffle = new Audio();
     this.deal = new Audio();
+    this.finish31OnDeal = new Audio();
     this.selectStack = new Audio();
     this.click = new Audio();
     this.swap = new Audio();
@@ -35,6 +36,7 @@ function initAudio(readyFunction) {
         initSound(sound.offline);
         initSound(sound.shuffle);
         initSound(sound.deal);
+        initSound(sound.finish31OnDeal);
         initSound(sound.selectStack);
         initSound(sound.click);
         initSound(sound.swap);
@@ -75,6 +77,7 @@ function loadAudio(readyFunction) {
     sound.offline.src = 'snd-offline.mp3';
     sound.shuffle.src = 'snd-shuffle.mp3';
     sound.deal.src = 'snd-deal.mp3';
+    sound.finish31OnDeal.src = 'snd-finish31OnDeal.mp3';
     sound.selectStack.src = 'snd-selectStack.mp3';
     sound.click.src = 'snd-click.mp3';
     sound.swap.src = 'snd-swap.mp3';

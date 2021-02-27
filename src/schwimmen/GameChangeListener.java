@@ -61,10 +61,12 @@ public class GameChangeListener implements PropertyChangeListener {
     }
 
     private GamePhase getMessageForPhase(GAMEPHASE phase) {
-        SchwimmenPlayer actor = getActorForGamePhase(phase);
+        SchwimmenPlayer actor = game.getMover();
         switch (phase) {
             case discover:
                 return new GamePhase(game.getDiscoverMessage(), actor);
+            case finish31OnDeal:
+                return new GamePhase(game.getFinish31OnDealMessage(), actor);
             case moveResult:
                 return new GamePhase(game.getPlayertMove(), actor);
             case waitForPlayerMove:
@@ -74,10 +76,6 @@ public class GameChangeListener implements PropertyChangeListener {
             default:
                 return new GamePhase(phase, actor);
         }
-    }
-
-    private SchwimmenPlayer getActorForGamePhase(GAMEPHASE phase) {
-        return game.getMover();
     }
 
     private void processGamePhase(PropertyChangeEvent evt) {

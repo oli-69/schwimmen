@@ -43,6 +43,7 @@ public class SchwimmenGameTest {
     private static final Logger LOGGER = LogManager.getLogger(SchwimmenGameTest.class);
 
     private List<Card> gameStack;
+    private List<Card> dealerStack;
     private SchwimmenGame game;
     private SchwimmenPlayer player1;
     private SchwimmenPlayer player2;
@@ -59,6 +60,7 @@ public class SchwimmenGameTest {
     private TestSocket socket3;
     private TestSocket socket4;
     private TestSocket socket5;
+    private List<List<Card>> dealCardStacks;
     private final String name1 = "Player 1";
     private final String name2 = "Player 2";
     private final String name3 = "Player 3";
@@ -69,7 +71,10 @@ public class SchwimmenGameTest {
     @Before
     public void setUp() {
         gameStack = Collections.synchronizedList(new ArrayList<>());
-        game = new SchwimmenGame(gameStack, "");
+        dealerStack = Collections.synchronizedList(new ArrayList<>());
+        dealCardStacks = Arrays.asList(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        dealCardStacks.forEach(stack -> make25(stack));
+        game = new SchwimmenGame(gameStack, dealerStack, "", new CardDealServiceImpl());
         session1 = Mockito.mock(Session.class);
         session2 = Mockito.mock(Session.class);
         session3 = Mockito.mock(Session.class);
@@ -122,6 +127,80 @@ public class SchwimmenGameTest {
             LOGGER.info("FinishSound: " + cursor);
         }
         assertEquals(game.getFinishSoundCount(), ids.size());
+    }
+
+    @Test
+    public void test31onDeal_player_keep() {
+        startWith3Players();
+        make30(dealCardStacks.get(1));
+        make31(dealCardStacks.get(2));
+        make25(dealCardStacks.get(3));
+        socket1.onText("{\"action\": \"dealCards\"}");
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");
+        assertEquals(3, player1.getGameTokens());
+        assertEquals(3, player2.getGameTokens());      
+        assertEquals(2, player3.getGameTokens());      
+    }
+
+    @Test
+    public void test31onDeal_player_change() {
+        startWith3Players();
+        make25(dealCardStacks.get(0));
+        make7_8_9(dealCardStacks.get(1));
+        make31(dealCardStacks.get(2));
+        make30(dealCardStacks.get(3));
+        socket1.onText("{\"action\": \"dealCards\"}");
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"change\"}");
+        assertEquals(2, player1.getGameTokens());
+        assertEquals(3, player2.getGameTokens());      
+        assertEquals(3, player3.getGameTokens());      
+    }
+
+    @Test
+    public void test31onDeal_dealer() {
+        startWith2Players();
+        make31(dealCardStacks.get(1));
+        socket1.onText("{\"action\": \"dealCards\"}");
+        assertEquals(3, player1.getGameTokens());
+        assertEquals(2, player2.getGameTokens());
+    }
+
+    @Test
+    public void test31onDealChangedStack() {
+        startWith2Players();
+        make31(dealCardStacks.get(0));
+        socket1.onText("{\"action\": \"dealCards\"}");
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"change\"}");
+        assertEquals(3, player1.getGameTokens());
+        assertEquals(2, player2.getGameTokens());
+    }
+
+    @Test
+    public void testFireonDealChangedStack() {
+        startWith2Players();
+        makeFire(dealCardStacks.get(0));
+        socket1.onText("{\"action\": \"dealCards\"}");
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"change\"}");
+        assertEquals(3, player1.getGameTokens());
+        assertEquals(2, player2.getGameTokens());
+    }
+
+    @Test
+    public void testFireOnDeal_dealer() {
+        startWith2Players();
+        makeFire(dealCardStacks.get(1));
+        socket1.onText("{\"action\": \"dealCards\"}");
+        assertEquals(3, player1.getGameTokens());
+        assertEquals(2, player2.getGameTokens());
+    }
+
+    @Test
+    public void testFireOnDeal_player() {
+        startWith2Players();
+        makeFire(dealCardStacks.get(2));
+        socket1.onText("{\"action\": \"dealCards\"}");
+        assertEquals(2, player1.getGameTokens());
+        assertEquals(3, player2.getGameTokens());
     }
 
     @Test
@@ -1263,6 +1342,25 @@ public class SchwimmenGameTest {
 
         public boolean receivedMessage(String message) {
             return messageBuff.stream().anyMatch((msg) -> (message.equals(msg)));
+        }
+    }
+
+    private class CardDealServiceImpl implements SchwimmenGame.CardDealService {
+
+        @Override
+        public void dealCards(SchwimmenGame game) {
+            dealerStack.clear();
+            player1.getStack().clear();
+            player2.getStack().clear();
+            player3.getStack().clear();
+            player4.getStack().clear();
+            player5.getStack().clear();
+            dealerStack.addAll(dealCardStacks.get(0));
+            player1.getStack().addAll(dealCardStacks.get(1));
+            player2.getStack().addAll(dealCardStacks.get(2));
+            player3.getStack().addAll(dealCardStacks.get(3));
+            player4.getStack().addAll(dealCardStacks.get(4));
+            player5.getStack().addAll(dealCardStacks.get(5));
         }
     }
 

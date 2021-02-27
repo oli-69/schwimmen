@@ -10,6 +10,7 @@ public class GamePhase {
     public String actor;
     public PlayerMove moveResult;
     public DiscoverMessage discoverMessage;
+    public Finish31OnDealMessage finish31OnDealMessage;
     public boolean changeStackAllowed;
     public boolean knockAllowed;
     public boolean passAllowed;
@@ -44,5 +45,10 @@ public class GamePhase {
     public GamePhase(DiscoverMessage discoverMessage, SchwimmenPlayer actor) {
         this(GAMEPHASE.discover, actor);
         this.discoverMessage = discoverMessage;
+    }
+
+    public GamePhase(Finish31OnDealMessage finish31OnDealMessage, SchwimmenPlayer actor) {
+        this(GAMEPHASE.finish31OnDeal, actor);
+        this.finish31OnDealMessage = finish31OnDealMessage;
     }
 }

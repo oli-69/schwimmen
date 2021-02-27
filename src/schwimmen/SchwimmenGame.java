@@ -23,6 +23,7 @@ import schwimmen.messages.CardSwap;
 import schwimmen.messages.ChatMessage;
 import schwimmen.messages.DiscoverMessage;
 import schwimmen.messages.DiscoverStack;
+import schwimmen.messages.Finish31OnDealMessage;
 import schwimmen.messages.GameStateMessage;
 import schwimmen.messages.PlayerMove;
 import schwimmen.messages.PlayerStack;
@@ -61,6 +62,10 @@ public class SchwimmenGame extends CardGame {
          * The game didn's start yet. Player's can choose to attend the next
          * round, or not.
          */
+        /**
+         * The game didn's start yet. Player's can choose to attend the next
+         * round, or not.
+         */
         waitForAttendees,
         /**
          * The card dealer is shuffling. The player ends this phase by starting
@@ -72,6 +77,11 @@ public class SchwimmenGame extends CardGame {
          * the stock in the middle.
          */
         dealCards,
+        /**
+         * A player got 31 on his hand. The dealer has to select which stack is
+         * hold and which goes into the stock in the middle.
+         */
+        finish31OnDeal,
         /**
          * Game is waiting for next player move.
          */
@@ -143,6 +153,7 @@ public class SchwimmenGame extends CardGame {
     private final List<Integer> finishSoundIds;
     private final String videoRoomName;
     private final Set<GAMERULE> gameRules;
+    private final CardDealService cardDealService;
 
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
     private int[] allAttendees; // IDs of players at start of the game (alive + death).
@@ -150,6 +161,7 @@ public class SchwimmenGame extends CardGame {
     private SchwimmenPlayer mover = null; // this is like the cursor or pointer of the player which has to move. 
     private PlayerMove playerMove = null;
     private DiscoverMessage discoverMessage = null;
+    private Finish31OnDealMessage finish31OnDealMessage = null;
     private boolean webradioPlaying = true;
     private int finishSoundIdCursor = 0;
     private int finishSoundId = 0;
@@ -158,7 +170,8 @@ public class SchwimmenGame extends CardGame {
      * Default Constructor. Creates an instance of this class.
      */
     public SchwimmenGame() {
-        this(Collections.synchronizedList(new ArrayList<>()), "");
+        this(Collections.synchronizedList(new ArrayList<>()), Collections.synchronizedList(new ArrayList<>()),
+                "", new CardDealServiceImpl());
     }
 
     /**
@@ -167,7 +180,8 @@ public class SchwimmenGame extends CardGame {
      * @param conferenceName the room name for the jitsi conference
      */
     public SchwimmenGame(String conferenceName) {
-        this(Collections.synchronizedList(new ArrayList<>()), conferenceName);
+        this(Collections.synchronizedList(new ArrayList<>()), Collections.synchronizedList(new ArrayList<>()),
+                conferenceName, new CardDealServiceImpl());
     }
 
     /**
@@ -176,7 +190,7 @@ public class SchwimmenGame extends CardGame {
      * @param gameStack injected game stack.
      * @param conferenceName the room name for the jitsi conference
      */
-    SchwimmenGame(List<Card> gameStack, String conferenceName) {
+    SchwimmenGame(List<Card> gameStack, List<Card> dealerStack, String conferenceName, CardDealService cardDealService) {
         super(CARDS_32);
         players = Collections.synchronizedList(new ArrayList<>());
         playerIdComparator = new PlayerIdComparator(players);
@@ -187,7 +201,7 @@ public class SchwimmenGame extends CardGame {
         askForViewMap = Collections.synchronizedMap(new HashMap<>());
         askForShowMap = Collections.synchronizedMap(new HashMap<>());
         this.gameStack = gameStack;
-        dealerStack = Collections.synchronizedList(new ArrayList<>());
+        this.dealerStack = dealerStack;
         gameStackProperties = new GameStackProperties(gameStack);
         gameRules = new HashSet<>();
         playerListener = this::playerPropertyChanged;
@@ -196,6 +210,7 @@ public class SchwimmenGame extends CardGame {
         finishSoundIds = new ArrayList<>();
         initFinishSoundIds();
         videoRoomName = conferenceName;
+        this.cardDealService = cardDealService;
         super.addPropertyChangeListener(new GameChangeListener(this));
     }
 
@@ -375,9 +390,10 @@ public class SchwimmenGame extends CardGame {
                 }
             }
         }
+        Finish31OnDealMessage finish31OnDeal = (gamePhase == GAMEPHASE.finish31OnDeal) ? finish31OnDealMessage : null;
         return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
                 gameStackProperties.getGameStack(), player.getStack(), getViewerStackList(player), isChangeStackAllowed(player),
-                isKnockAllowed(), isPassAllowed(player), discoverStacks, webradioPlaying);
+                isKnockAllowed(), isPassAllowed(player), discoverStacks, finish31OnDeal, webradioPlaying);
     }
 
     /**
@@ -469,6 +485,15 @@ public class SchwimmenGame extends CardGame {
      */
     public DiscoverMessage getDiscoverMessage() {
         return discoverMessage;
+    }
+
+    /**
+     * Getter for property Finish31OnDeal Message.
+     *
+     * @return the current Finish31OnDeal message, if any.
+     */
+    public Finish31OnDealMessage getFinish31OnDealMessage() {
+        return finish31OnDealMessage;
     }
 
     /**
@@ -736,6 +761,15 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
+    private void finishOnDeal() {
+        if (round.finishScore == 33 || mover.equals(round.finisher)) {
+            discover();
+        } else {
+            finish31OnDealMessage = new Finish31OnDealMessage(round.finisher, round.finisher.getStack());
+            setGamePhase(GAMEPHASE.finish31OnDeal);
+        }
+    }
+
     private void discover() {
         mover = getNextTo(round.dealer);
         List<DiscoverStack> playerStacks = new ArrayList<>();
@@ -841,15 +875,13 @@ public class SchwimmenGame extends CardGame {
                             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
                             players.forEach(p -> p.reset());
                             players.forEach(p -> p.getSocket().sendString(gson.toJson(
-                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
-                                            gameStackProperties.getGameStack(), new ArrayList<>(), new ViewerStackList(), false, false, false, null, webradioPlaying))));
+                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), webradioPlaying))));
                             setGamePhase(GAMEPHASE.waitForAttendees);
                         } else {
                             players.forEach(p -> {
                                 p.getStack().clear();
                                 p.getSocket().sendString(gson.toJson(
-                                        new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
-                                                gameStackProperties.getGameStack(), new ArrayList<>(), new ViewerStackList(), false, false, false, null, webradioPlaying)));
+                                        new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), webradioPlaying)));
                             }
                             );
                             setGamePhase(GAMEPHASE.shuffle);
@@ -915,21 +947,13 @@ public class SchwimmenGame extends CardGame {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.shuffle) {
                 initRound();
-                shuffleStack();
-                for (int i = 0; i < 3; i++) {
-                    attendees.forEach((attendee) -> {
-                        attendee.addToStack(getFromStack());
-                        if (attendee.equals(mover)) {
-                            dealerStack.add(getFromStack());
-                        }
-                    });
-                }
+                cardDealService.dealCards(this);
                 attendees.forEach((attendee) -> {
                     attendee.getSocket().sendString(gson.toJson(new PlayerStack(attendee.getStack())));
                 });
                 setGamePhase(GAMEPHASE.dealCards);
                 if (isFinishStackExists()) {
-                    discover();
+                    finishOnDeal();
                 }
             } else {
                 LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.shuffle));
@@ -941,7 +965,7 @@ public class SchwimmenGame extends CardGame {
 
     private void processSelectStack(SchwimmenPlayer player, String action) {
         if (player.equals(mover)) {
-            if (gamePhase == GAMEPHASE.dealCards) {
+            if (gamePhase == GAMEPHASE.dealCards || gamePhase == GAMEPHASE.finish31OnDeal) {
                 switch (action) {
                     case "keep":
                         gameStack.addAll(dealerStack);
@@ -961,7 +985,7 @@ public class SchwimmenGame extends CardGame {
                 setPlayerMove(new PlayerMove(MOVE.selectStack, gameStackProperties.getGameStack(), action));
                 stepGamePhase();
             } else {
-                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.dealCards));
+                LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.dealCards + "|" + GAMEPHASE.finish31OnDeal));
             }
         } else {
             LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht der Kartengeber!");
@@ -1323,8 +1347,8 @@ public class SchwimmenGame extends CardGame {
     boolean isFinishStack(List<Card> cards, SchwimmenPlayer player) {
         float score = getStackScore(cards);
         if (score > 30.5) {
-            round.finisher = player;
-            round.finishScore = score;
+            round.finisher = score > round.finishScore ? player : round.finisher;
+            round.finishScore = Math.max(score, round.finishScore);
             LOGGER.debug("Player '" + player + "' finishes with " + score);
         }
         return round.finisher != null;
@@ -1332,12 +1356,13 @@ public class SchwimmenGame extends CardGame {
 
     // search the stacks for 31 or FIRE 
     boolean isFinishStackExists() {
+        boolean result = false;
         for (SchwimmenPlayer attendee : attendees) {
             if (isFinishStack(attendee.getStack(), attendee)) {
-                return true;
+                result = true;
             }
         }
-        return false;
+        return result;
         // disabled this, since the next player must have the chance to make fire, even if there is 31 in the game stack.
         // return  (isFinishStack(gameStack, getNextTo(mover)));
     }
@@ -1414,6 +1439,27 @@ public class SchwimmenGame extends CardGame {
         @Override
         public int compare(SchwimmenPlayer p1, SchwimmenPlayer p2) {
             return playerList.indexOf(p1) < playerList.indexOf(p2) ? -1 : 1;
+        }
+    }
+
+    interface CardDealService {
+
+        void dealCards(SchwimmenGame game);
+    }
+
+    private static class CardDealServiceImpl implements CardDealService {
+
+        @Override
+        public void dealCards(SchwimmenGame game) {
+            game.shuffleStack();
+            for (int i = 0; i < 3; i++) {
+                game.attendees.forEach((attendee) -> {
+                    attendee.getStack().add(game.getFromStack());
+                    if (attendee.equals(game.mover)) {
+                        game.dealerStack.add(game.getFromStack());
+                    }
+                });
+            }
         }
     }
 
