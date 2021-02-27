@@ -768,6 +768,29 @@ public class SchwimmenGameTest {
     }
 
     @Test
+    public void testAskForCardShow_response_doubleclick() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        Runnable r = () -> {
+            socket2.onText("{\"action\": \"askForCardShow\", \"target\": \"Player 1\"}");
+            AskForCardShow question = gson.fromJson(socket1.lastMessage(), AskForCardShow.class);
+            socket1.onText("{\"action\": \"askForCardShowResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+        };
+        Thread thread1 = new Thread(r);
+        Thread thread2 = new Thread(r);
+        thread1.start();
+        thread2.start();
+        try {
+            while (thread2.isAlive() && thread1.isAlive()) {
+                Thread.sleep(1000);
+            }
+        } catch (InterruptedException ex) {
+            System.out.println(ex);
+        }
+    }
+
+    @Test
     public void testAskForCardShow_response_yes() {
         startWith5Players();
         game.getRound().leavers.add(player1);
@@ -916,6 +939,30 @@ public class SchwimmenGameTest {
         assertEquals(messageCount + 1, socket1.messageBuff.size());
         ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
         assertEquals(name2 + " l&auml;sst " + name1 + " nicht in die Karten schauen.", chatMessage.text);
+    }
+
+    @Test
+    public void testAskForCardView_response_doubleclick() {
+        startWith5Players();
+        game.getRound().leavers.add(player1);
+        game.removeAttendee(player1);
+        Runnable r = () -> {
+            socket1.onText("{\"action\": \"askForCardView\", \"target\": \"Player 2\"}");
+            AskForCardShow question = gson.fromJson(socket1.lastMessage(), AskForCardShow.class);
+            socket2.onText("{\"action\": \"askForCardViewResponse\", \"hashCode\": \"" + question.hashCode + "\", \"value\": \"true\"}");
+        };
+        Thread thread1 = new Thread(r);
+        Thread thread2 = new Thread(r);
+
+        thread1.start();
+        thread2.start();
+        try {
+            while (thread2.isAlive() && thread1.isAlive()) {
+                Thread.sleep(1000);
+            }
+        } catch (InterruptedException ex) {
+            System.out.println(ex);
+        }
     }
 
     @Test
@@ -1073,12 +1120,12 @@ public class SchwimmenGameTest {
         make7_8_9(player2.getStack());
         make7_8_9(player3.getStack());
         socket1.onText("{\"action\": \"dealCards\"}");
-        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");        
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");
         swapCard(socket2);
         swapCard(socket3);
         socket1.onText("{\"action\": \"knock\"}"); // klopft
         swapCard(socket2);
-        make7_8_9(gameStack);   
+        make7_8_9(gameStack);
         assertTrue(game.isChangeStackAllowed(player3));
         socket3.onText("{\"action\": \"changeStack\"}"); // neue Karten bei 7/8/9
         GamePhase gamePhase = gson.fromJson(socket1.lastMessage(), GamePhase.class);

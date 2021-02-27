@@ -183,9 +183,9 @@ public class SchwimmenGame extends CardGame {
         attendees = Collections.synchronizedList(new ArrayList<>());
         allAttendees = new int[0];
         gameLeavers = Collections.synchronizedList(new ArrayList<>());
-        viewerMap = new HashMap<>();
-        askForViewMap = new HashMap<>();
-        askForShowMap = new HashMap<>();
+        viewerMap = Collections.synchronizedMap(new HashMap<>());
+        askForViewMap = Collections.synchronizedMap(new HashMap<>());
+        askForShowMap = Collections.synchronizedMap(new HashMap<>());
         this.gameStack = gameStack;
         dealerStack = Collections.synchronizedList(new ArrayList<>());
         gameStackProperties = new GameStackProperties(gameStack);
@@ -1090,6 +1090,7 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Received invalid AskForView-Response: no question available");
             return;
         }
+        askForViewMap.remove(question.hashCode);
         JsonElement valueElement = message.jsonObject.get("value");
         if (valueElement == null) {
             LOGGER.warn("Received invalid AskForView-Response: no value available");
@@ -1109,7 +1110,6 @@ public class SchwimmenGame extends CardGame {
         } else {
             chat(player.getName() + " l&auml;sst " + question.source + " nicht in die Karten schauen.");
         }
-        askForViewMap.remove(question.hashCode);
     }
 
     private void processAskForCardView(SchwimmenPlayer player, String target) {
@@ -1135,6 +1135,16 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Player '" + player.getName() + "' is already viewer of " + target + "!");
             return;
         }
+        List<Integer> existingKeys = new ArrayList<>();
+        askForViewMap.keySet().forEach(key -> {
+            if (player.getName().equals(askForViewMap.get(key).source)) {
+                existingKeys.add(key);
+            }
+        });
+        existingKeys.forEach(key -> {
+            LOGGER.warn("AskForCardView already requested. Removing old question.");
+            askForViewMap.remove(key);
+        });
 
         AskForCardView askForCardView = new AskForCardView(player);
         askForViewMap.put(askForCardView.hashCode, askForCardView);
@@ -1151,6 +1161,7 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Received invalid AskForShow-Response: no question available");
             return;
         }
+        askForShowMap.remove(question.hashCode);
         JsonElement valueElement = message.jsonObject.get("value");
         if (valueElement == null) {
             LOGGER.warn("Received invalid AskForShow-Response: no value available");
@@ -1172,7 +1183,6 @@ public class SchwimmenGame extends CardGame {
         } else {
             chat(player.getName() + " m&ouml;chte die Karten von " + question.source + " nicht sehen.");
         }
-        askForShowMap.remove(question.hashCode);
     }
 
     private void processAskForCardShow(SchwimmenPlayer player, String target) {
@@ -1198,7 +1208,16 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Player '" + target + "' is already viewer of " + player.getName() + "!");
             return;
         }
-
+        List<Integer> existingKeys = new ArrayList<>();
+        askForShowMap.keySet().forEach(key -> {
+            if (player.getName().equals(askForShowMap.get(key).source)) {
+                existingKeys.add(key);
+            }
+        });
+        existingKeys.forEach(key -> {
+            LOGGER.warn("AskForCardShow already requested. Removing old question.");
+            askForShowMap.remove(key);
+        });
         AskForCardShow askForCardShow = new AskForCardShow(player);
         askForShowMap.put(askForCardShow.hashCode, askForCardShow);
         targetPlayer.getSocket().sendString(gson.toJson(askForCardShow));
