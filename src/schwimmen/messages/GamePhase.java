@@ -15,6 +15,7 @@ public class GamePhase {
     public boolean knockAllowed;
     public boolean passAllowed;
     public int[] allAttendees;
+    public ViewerStackList viewerStackList;
 
     public GamePhase(GAMEPHASE phase) {
         this(phase, null);

@@ -199,6 +199,7 @@ function onGamePhaseMessage(message) {
             onGamePhase(gamePhase);
             break;
         case "dealCards":
+            viewerStacks = message.viewerStackList.viewerStacks;
             updateAttendeeList();
             updateAttendeeStacks(undefined);
             sound.deal.play();
@@ -213,6 +214,7 @@ function onGamePhaseMessage(message) {
             onGamePhase(gamePhase);
             break;
         case "waitForAttendees":
+            viewerStacks = [0];
             updateAttendeeList();
             onGamePhase(gamePhase);
             break;
@@ -221,6 +223,7 @@ function onGamePhaseMessage(message) {
             onGamePhase(gamePhase);
             break;
         case "moveResult":
+            viewerStacks = message.viewerStackList.viewerStacks;
             onMoveResult(message.moveResult);
             break;
         case "discover":
@@ -366,7 +369,6 @@ function onMoveResult(result) {
         var readyFunction = function () {
             try {
                 gameStack = result.gameStack.cards;
-                viewerStacks = result.viewerStackList.viewerStacks;
                 log("'" + mover + "': " + result.move);
                 logStack("Game Stack", gameStack);
                 logStack("Player Stack", playerStack);
@@ -524,8 +526,9 @@ function animateDealCards(readyFunction) {
     for (var i = 0; i < cards.length; i++) {
         if (i === cards.length - 1) {
             animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay, readyFunction);
+        } else {
+            animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay);
         }
-        animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay);
     }
 }
 
@@ -1142,7 +1145,6 @@ function updateAttendeeStacks(message) {
             }
             if (gamePhase === "finish31OnDeal") {
                 finish31OnDealMessage = message.finish31OnDealMessage; //(message.action === "gameState") ? message.finish31OnDealMessage : message.discoverMessage.finish31OnDealMessage;
-                log("DEBUG: " + message.action);
             }
         }
         var id = getMyAllAttendeeId();
@@ -1242,9 +1244,11 @@ function updateCardStack(desk, cards) {
 }
 
 function getViewerStack(name) {
-    for (var i = 0; i < viewerStacks.length; i++) {
-        if (viewerStacks[i].name === name) {
-            return viewerStacks[i].cards;
+    if (viewerStacks !== undefined) {
+        for (var i = 0; i < viewerStacks.length; i++) {
+            if (viewerStacks[i].name === name) {
+                return viewerStacks[i].cards;
+            }
         }
     }
     return undefined;

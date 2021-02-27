@@ -80,11 +80,11 @@ public class GameChangeListener implements PropertyChangeListener {
 
     private void processGamePhase(PropertyChangeEvent evt) {
         GAMEPHASE phase = (GAMEPHASE) evt.getNewValue();
-        if (phase == GAMEPHASE.moveResult) {
+        if (phase == GAMEPHASE.moveResult || phase == GAMEPHASE.dealCards) {
             // send an individual message to the clients which include the viewer stacks
             game.getPlayerList().forEach(p -> {
                 GamePhase message = getMessageForPhase(phase);
-                message.moveResult.viewerStackList = game.getViewerStackList(p);
+                message.viewerStackList = game.getViewerStackList(p);
                 p.getSocket().sendString(gson.toJson(message));
             });
 

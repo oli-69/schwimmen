@@ -10,7 +10,6 @@ public class PlayerMove {
     public GameStack gameStack;
     public int count;
     public String stackAction;
-    public ViewerStackList viewerStackList;
 
     public PlayerMove(MOVE move, GameStack gameStack) {
         this.move = move.name();
