@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -58,10 +59,6 @@ public class SchwimmenGame extends CardGame {
      * Enumeration of the game phases.
      */
     public static enum GAMEPHASE {
-        /**
-         * The game didn's start yet. Player's can choose to attend the next
-         * round, or not.
-         */
         /**
          * The game didn's start yet. Player's can choose to attend the next
          * round, or not.
@@ -141,7 +138,7 @@ public class SchwimmenGame extends CardGame {
     private final List<SchwimmenPlayer> players; // List of all players in the room
     private final List<SchwimmenPlayer> attendees; // sub-list of players, which are actually in the game (alive).
     private final List<SchwimmenPlayer> gameLeavers; // sub-list of attendees, which are already out (death)
-    private final Map<SchwimmenPlayer, List<SchwimmenPlayer>> viewerMap;
+    private final Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> viewerMap;
     private final Map<Integer, AskForCardView> askForViewMap;
     private final Map<Integer, AskForCardShow> askForShowMap;
     private final PropertyChangeListener playerListener;
@@ -429,7 +426,7 @@ public class SchwimmenGame extends CardGame {
      *
      * @return the map of card viewers for all players.
      */
-    public Map<SchwimmenPlayer, List<SchwimmenPlayer>> getViewerMap() {
+    public Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> getViewerMap() {
         return viewerMap;
     }
 
@@ -444,7 +441,7 @@ public class SchwimmenGame extends CardGame {
         List<SchwimmenPlayer> showerList = new ArrayList<>();
         while (iterator.hasNext()) {
             SchwimmenPlayer shower = iterator.next();
-            List<SchwimmenPlayer> viewers = viewerMap.get(shower);
+            Collection<SchwimmenPlayer> viewers = viewerMap.get(shower);
             if (viewers != null && viewers.contains(player)) {
                 showerList.add(shower);
             }
@@ -849,7 +846,7 @@ public class SchwimmenGame extends CardGame {
                                 gameLooser = leaver; // dealer for the next game
                             }
                             gameLeavers.add(leaver);
-                            List<SchwimmenPlayer> viewerList = viewerMap.get(leaver);
+                            Collection<SchwimmenPlayer> viewerList = viewerMap.get(leaver);
                             if (viewerList != null) {
                                 viewerList.clear();
                             }
@@ -859,7 +856,7 @@ public class SchwimmenGame extends CardGame {
                         });
                         if (attendees.size() == 1) { // game over
                             SchwimmenPlayer winner = attendees.get(0);
-                            List<SchwimmenPlayer> viewerList = viewerMap.get(winner);
+                            Collection<SchwimmenPlayer> viewerList = viewerMap.get(winner);
                             if (viewerList != null) {
                                 viewerList.clear();
                             }
@@ -1121,9 +1118,9 @@ public class SchwimmenGame extends CardGame {
             return;
         }
         if (valueElement.getAsBoolean() && attendees.contains(player)) {
-            List<SchwimmenPlayer> viewerList = viewerMap.get(player);
+            Collection<SchwimmenPlayer> viewerList = viewerMap.get(player);
             if (viewerList == null) {
-                viewerList = new ArrayList<>();
+                viewerList = new HashSet<>();
                 viewerMap.put(player, viewerList);
             }
             SchwimmenPlayer viewer = getPlayer(question.source);
@@ -1154,22 +1151,11 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Player '" + target + "' is not in game!");
             return;
         }
-        List<SchwimmenPlayer> viewerList = viewerMap.get(targetPlayer);
+        Collection<SchwimmenPlayer> viewerList = viewerMap.get(targetPlayer);
         if (viewerList != null && viewerList.contains(player)) {
             LOGGER.warn("Player '" + player.getName() + "' is already viewer of " + target + "!");
             return;
         }
-        List<Integer> existingKeys = new ArrayList<>();
-        askForViewMap.keySet().forEach(key -> {
-            if (player.getName().equals(askForViewMap.get(key).source)) {
-                existingKeys.add(key);
-            }
-        });
-        existingKeys.forEach(key -> {
-            LOGGER.warn("AskForCardView already requested. Removing old question.");
-            askForViewMap.remove(key);
-        });
-
         AskForCardView askForCardView = new AskForCardView(player);
         askForViewMap.put(askForCardView.hashCode, askForCardView);
         targetPlayer.getSocket().sendString(gson.toJson(askForCardView));
@@ -1194,9 +1180,9 @@ public class SchwimmenGame extends CardGame {
         if (valueElement.getAsBoolean()) {
             SchwimmenPlayer askingPlayer = getPlayer(question.source);
             if (attendees.contains(askingPlayer)) {
-                List<SchwimmenPlayer> viewerList = viewerMap.get(askingPlayer);
+                Collection<SchwimmenPlayer> viewerList = viewerMap.get(askingPlayer);
                 if (viewerList == null) {
-                    viewerList = new ArrayList<>();
+                    viewerList = new HashSet<>();
                     viewerMap.put(askingPlayer, viewerList);
                 }
                 viewerList.add(player);
@@ -1227,21 +1213,11 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Player '" + target + "' is in game!");
             return;
         }
-        List<SchwimmenPlayer> viewerList = viewerMap.get(player);
+        Collection<SchwimmenPlayer> viewerList = viewerMap.get(player);
         if (viewerList != null && viewerList.contains(targetPlayer)) {
             LOGGER.warn("Player '" + target + "' is already viewer of " + player.getName() + "!");
             return;
         }
-        List<Integer> existingKeys = new ArrayList<>();
-        askForShowMap.keySet().forEach(key -> {
-            if (player.getName().equals(askForShowMap.get(key).source)) {
-                existingKeys.add(key);
-            }
-        });
-        existingKeys.forEach(key -> {
-            LOGGER.warn("AskForCardShow already requested. Removing old question.");
-            askForShowMap.remove(key);
-        });
         AskForCardShow askForCardShow = new AskForCardShow(player);
         askForShowMap.put(askForCardShow.hashCode, askForCardShow);
         targetPlayer.getSocket().sendString(gson.toJson(askForCardShow));
@@ -1254,7 +1230,7 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Player '" + targetName + "' doesn't exist!");
             return;
         }
-        List<SchwimmenPlayer> viewerList = viewerMap.get(targetPlayer);
+        Collection<SchwimmenPlayer> viewerList = viewerMap.get(targetPlayer);
         if (viewerList == null || !viewerList.contains(player)) {
             LOGGER.warn("Player '" + player.getName() + "' is not viewer of player '" + targetName + "'!");
             return;
@@ -1273,7 +1249,7 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Player '" + targetName + "' doesn't exist!");
             return;
         }
-        List<SchwimmenPlayer> viewerList = viewerMap.get(player);
+        Collection<SchwimmenPlayer> viewerList = viewerMap.get(player);
         if (viewerList == null || !viewerList.contains(targetPlayer)) {
             LOGGER.warn("Player '" + targetName + "' is not viewer of player '" + player.getName() + "'!");
             return;

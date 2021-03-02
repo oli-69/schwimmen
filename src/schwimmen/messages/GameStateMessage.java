@@ -1,6 +1,7 @@
 package schwimmen.messages;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import schwimmen.SchwimmenPlayer;
@@ -25,13 +26,13 @@ public class GameStateMessage {
     public boolean webradioPlaying;
 
     public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
-            Map<SchwimmenPlayer, List<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack, boolean webradioPlaying) {
+            Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack, boolean webradioPlaying) {
         this(phase, players, attendees, allAttendees, viewerMap, mover, gameStack,
                 new ArrayList<>(), new ViewerStackList(), false, false, false, null, null, webradioPlaying);
     }
 
     public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
-            Map<SchwimmenPlayer, List<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack,
+            Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack,
             List<cardgame.Card> playerStack, ViewerStackList viewerStackList, boolean changeStackAllowed, boolean knockAllowed,
             boolean passAllowed, List<DiscoverStack> discoverStacks, Finish31OnDealMessage finish31OnDealMessage, boolean webradioPlaying) {
         this.phase = phase;

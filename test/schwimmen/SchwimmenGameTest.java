@@ -4,6 +4,7 @@ import cardgame.Card;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.apache.logging.log4j.Level;
@@ -138,8 +139,8 @@ public class SchwimmenGameTest {
         socket1.onText("{\"action\": \"dealCards\"}");
         socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");
         assertEquals(3, player1.getGameTokens());
-        assertEquals(3, player2.getGameTokens());      
-        assertEquals(2, player3.getGameTokens());      
+        assertEquals(3, player2.getGameTokens());
+        assertEquals(2, player3.getGameTokens());
     }
 
     @Test
@@ -152,8 +153,8 @@ public class SchwimmenGameTest {
         socket1.onText("{\"action\": \"dealCards\"}");
         socket1.onText("{\"action\": \"selectStack\", \"stack\": \"change\"}");
         assertEquals(2, player1.getGameTokens());
-        assertEquals(3, player2.getGameTokens());      
-        assertEquals(3, player3.getGameTokens());      
+        assertEquals(3, player2.getGameTokens());
+        assertEquals(3, player3.getGameTokens());
     }
 
     @Test
@@ -888,9 +889,9 @@ public class SchwimmenGameTest {
         assertEquals(messageCount + 2, socket2.messageBuff.size());
         ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
         assertEquals(name2 + " zeigt " + name1 + " die Karten.", chatMessage.text);
-        List<SchwimmenPlayer> viewerList = game.getViewerMap().get(player2);
+        Collection<SchwimmenPlayer> viewerList = game.getViewerMap().get(player2);
         assertEquals(1, viewerList.size());
-        assertEquals(player1, viewerList.get(0));
+        assertEquals(player1, viewerList.iterator().next());
     }
 
     @Test
@@ -994,9 +995,9 @@ public class SchwimmenGameTest {
         assertEquals(messageCount + 3, socket1.messageBuff.size());
         ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
         assertEquals(name1 + " schaut bei " + name2 + " in die Karten.", chatMessage.text);
-        List<SchwimmenPlayer> viewerList = game.getViewerMap().get(player2);
+        Collection<SchwimmenPlayer> viewerList = game.getViewerMap().get(player2);
         assertEquals(1, viewerList.size());
-        assertEquals(player1, viewerList.get(0));
+        assertEquals(player1, viewerList.iterator().next());
     }
 
     @Test
