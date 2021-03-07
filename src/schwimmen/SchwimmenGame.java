@@ -229,7 +229,7 @@ public class SchwimmenGame extends CardGame {
             }
             firePropertyChange(PROP_GAMERULE, oldVal, enabled);
         } else {
-            throw new IllegalArgumentException("Game must be in pahse 'waitForAttendees', 'shuffle', or 'discover'");
+            throw new IllegalArgumentException("Game must be in phase 'waitForAttendees', 'shuffle', or 'discover'");
         }
     }
 
@@ -265,7 +265,7 @@ public class SchwimmenGame extends CardGame {
         player.addPropertyChangeListener(playerListener);
         players.add(player);
         firePropertyChange(PROP_PLAYERLIST, null, players);
-        String msg = player.getName() + " ist gekommen";
+        String msg = player.getName() + " ist dazu gekommen";
         chat(msg);
         LOGGER.info(msg);
         if (gamePhase == GAMEPHASE.waitForAttendees) {
