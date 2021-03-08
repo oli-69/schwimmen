@@ -355,8 +355,12 @@ function onDiscover(gamePhaseMessage) {
             });
             updateAttendeeList();
             updateAttendeeStacks(gamePhaseMessage);
-            $("#nextRoundBtn").prop("disabled", false);
+            // disabled here to cover empty payers/leavers when knock rules are disabled
+            // empty payers/leavers happens, when all attendees have equal card values when swimming
+            //    $("#nextRoundBtn").prop("disabled", false);
         }
+        // Button is activated here, outside of if-clause
+        $("#nextRoundBtn").prop("disabled", false);
     }
     , 3000);
 }
@@ -890,6 +894,9 @@ function updateDiscoverMessageBox(message) {
             }
             msgText += discoverMsg.leavers.length > 1 ? " scheiden aus" : " scheidet aus";
         }
+    }
+    if (discoverMsg.payers == undefined && discoverMsg.leavers == undefined) {
+        msgText += "<br>Unentschieden, es folgt noch eine Runde!";
     }
     $("#discoverMessage").html(msgText);
 }

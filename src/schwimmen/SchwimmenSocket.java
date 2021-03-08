@@ -88,14 +88,28 @@ public class SchwimmenSocket {
         this.session = session;
         connected = true;
         propChangeSupport.firePropertyChange(PROP_CONNECTED, Boolean.FALSE, Boolean.TRUE);
-        LOGGER.info(session.getRemoteAddress().getHostString() + " connected!");
+
+        //Check whether client is behind any proxy
+        String ipAddress = session.getUpgradeRequest().getHeader("X-FORWARDED-FOR");
+        if (ipAddress == null) {    //Means client was not behind any proxy
+            ipAddress = session.getRemoteAddress().getHostString();  // Then we can use getRemoteAddress to get the client ip address
+        }
+        LOGGER.info(ipAddress + " connected!");
+//        LOGGER.info(session.getRemoteAddress().getHostString() + " connected!");
     }
 
     @OnWebSocketClose
     public void onClose(Session session, int status, String reason) {
         connected = false;
         propChangeSupport.firePropertyChange(PROP_CONNECTED, Boolean.TRUE, Boolean.FALSE);
-        LOGGER.info(session.getRemoteAddress().getHostString() + " closed!");
+
+        //Check whether client is behind any proxy
+        String ipAddress = session.getUpgradeRequest().getHeader("X-FORWARDED-FOR");
+        if (ipAddress == null) {    //Means client was not behind any proxy
+            ipAddress = session.getRemoteAddress().getHostString();  // Then we can use getRemoteAddress to get the client ip address
+        }
+        LOGGER.info(ipAddress + " closed!");
+//        LOGGER.info(session.getRemoteAddress().getHostString() + " closed!");
     }
 
     public void close() {
@@ -182,5 +196,4 @@ public class SchwimmenSocket {
     private synchronized void processMessage(SocketMessage socketMessage) {
         propChangeSupport.firePropertyChange(PROP_MESSAGE, null, socketMessage);
     }
-
 }

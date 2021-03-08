@@ -130,8 +130,19 @@ public class Round {
      */
     public void knock(SchwimmenPlayer player) {
         if (knocker1 != null) {
+            // this is 2nd knock
+            if( game.isGameRuleEnabled(GAMERULE.Knocking) ) {
+                // 2nd knock rule is enabled
+                // knock could be from other player or first knocker
             knocker2 = player;
         } else {
+                if ( player.equals(knocker1) ) {
+                    // if 2nd knock is from first knocker (round end)
+                    knocker2 = player;
+                }
+            }
+        } else {
+            // this is 1st knock
             knocker1 = player;
         }
     }

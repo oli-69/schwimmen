@@ -46,7 +46,7 @@ public class SchwimmenServer {
      * @throws java.lang.Exception in case of an Exception.
      */
     public static void main(String[] args) throws Exception {
-        LOGGER.info("Starting http server)");
+        LOGGER.info("Starting http server");
         String configPath = System.getProperty("user.dir");
         if (args.length > 0) {
             // try absolute path
@@ -102,9 +102,10 @@ public class SchwimmenServer {
         }, "Stop HttpServer Hook"));
         new PingWatchdog(game).start();
 
-        game.setWebRadioPlaying(Boolean.parseBoolean(settings.getProperty("webradioEnabled", "true")));
-        game.setGameRuleEnabled(GAMERULE.newCardsOn789, Boolean.parseBoolean(settings.getProperty("rule789Enabled", "false")));
-        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, Boolean.parseBoolean(settings.getProperty("rulePassOnceEnabled", "false")));
+        game.setWebRadioPlaying(Boolean.parseBoolean(settings.getProperty("webradioEnabled", "false")));
+        game.setGameRuleEnabled(GAMERULE.newCardsOn789, Boolean.parseBoolean(settings.getProperty("rule789Enabled", "true")));
+        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, Boolean.parseBoolean(settings.getProperty("rulePassOnceEnabled", "true")));
+        game.setGameRuleEnabled(GAMERULE.Knocking, Boolean.parseBoolean(settings.getProperty("ruleKnockingEnabled", "false")));
         if (Boolean.parseBoolean(settings.getProperty("startUI", "true"))) {
             installLookAndFeel();
             SwingUtilities.invokeLater(() -> new SchwimmenFrame(game).setVisible(true));

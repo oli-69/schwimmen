@@ -6,7 +6,8 @@ import org.apache.logging.log4j.Logger;
 import schwimmen.SchwimmenGame;
 
 /**
- * Implementation of the server side user interface. Created with NetBeans GUI Editor.
+ * Implementation of the server side user interface. Created with NetBeans GUI
+ * Editor.
  */
 public class SchwimmenFrame extends javax.swing.JFrame {
 

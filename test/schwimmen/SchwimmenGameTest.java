@@ -291,6 +291,7 @@ public class SchwimmenGameTest {
 
     @Test
     public void testGetDiscoverMessage_onSingleKnockerFinish_badKnock() {
+        game.setGameRuleEnabled(GAMERULE.Knocking, true);
         startWith3Players();
         socket1.onText("{\"action\": \"dealCards\"}");
         make25(player1.getStack());
@@ -350,6 +351,7 @@ public class SchwimmenGameTest {
 
     @Test
     public void testGetDiscoverMessage_onSingleKnockerFinish_equalPoints() {
+        game.setGameRuleEnabled(GAMERULE.Knocking, true);
         startWith3Players();
         socket1.onText("{\"action\": \"dealCards\"}");
         make25(player1.getStack());
@@ -382,6 +384,7 @@ public class SchwimmenGameTest {
 
     @Test
     public void testGetDiscoverMessage_onDoubleKnockerFinish_equalPoints() {
+        game.setGameRuleEnabled(GAMERULE.Knocking, true);
         startWith3Players();
         socket1.onText("{\"action\": \"dealCards\"}");
         make25(player1.getStack());
@@ -409,6 +412,56 @@ public class SchwimmenGameTest {
         assertEquals(0f, message.finisherScore, 0f);
         assertEquals(1, message.payers.length);
         assertEquals(name1, message.payers[0]);
+    }
+
+    @Test
+    public void testGetDiscoverMessage_onKnockerFinish_noKnockingRules_equalPoints() {
+        game.setGameRuleEnabled(GAMERULE.Knocking, false);
+        startWith3Players();
+        socket1.onText("{\"action\": \"dealCards\"}");
+        make25(player1.getStack());
+        make25(player2.getStack());
+        make25(player3.getStack());
+        socket1.onText("{\"action\": \"selectStack\", \"stack\": \"keep\"}");
+
+        swapCard(socket2);
+        swapCard(socket3);
+
+        socket1.onText("{\"action\": \"knock\"}"); // klopft
+        assertNull(game.getDiscoverMessage()); // spiel muss noch laufen
+
+        socket2.onText("{\"action\": \"knock\"}"); // klopft
+        assertNull(game.getDiscoverMessage()); // spiel muss noch laufen
+
+        make25(player1.getStack());
+        make25(player2.getStack());
+        make25(player3.getStack());
+        make21(gameStack);
+
+        player1.decreaseToken();
+        player1.decreaseToken();
+        player1.decreaseToken();
+        player2.decreaseToken();
+        player2.decreaseToken();
+        player2.decreaseToken();
+        player3.decreaseToken();
+        player3.decreaseToken();
+        player3.decreaseToken();
+
+        assertEquals(0, player1.getGameTokens());
+        assertEquals(0, player2.getGameTokens());
+        assertEquals(0, player3.getGameTokens());
+        // alle Spieler schwimmen
+        
+        pass(socket3);
+        DiscoverMessage message = game.getDiscoverMessage();  // spielende erreicht
+
+        // kein Spieler zahlt oder steigt aus, da alle die gleiche Punktzahl haben UND schwimmen
+        assertNull(message.finisher);
+        assertEquals(0f, message.finisherScore, 0f);
+        assertNull(message.payers);
+        assertNull(message.leavers);
+
     }
 
     @Test
@@ -1304,7 +1357,7 @@ public class SchwimmenGameTest {
     private static class TestSocket extends SchwimmenSocket {
 
         String name;
-        List<String> messageBuff = new ArrayList();
+        List<String> messageBuff = new ArrayList<>();
         boolean connected = true;
         Session session;
 

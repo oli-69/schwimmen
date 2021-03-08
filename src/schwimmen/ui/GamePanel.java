@@ -41,6 +41,7 @@ public class GamePanel extends javax.swing.JPanel {
         cbWebradio.setSelected(game.isWebradioPlaying());
         cbRule789.setSelected(game.isGameRuleEnabled(GAMERULE.newCardsOn789));
         cbRulePassOnce.setSelected(game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound));
+        cbRuleKnocking.setSelected(game.isGameRuleEnabled(GAMERULE.Knocking));
     }
 
     private ListModel<SchwimmenPlayer> getListPlayerListModel() {
@@ -86,6 +87,7 @@ public class GamePanel extends javax.swing.JPanel {
         boolean changeRuleAllowd = phase == GAMEPHASE.waitForAttendees || phase == GAMEPHASE.shuffle || phase == GAMEPHASE.discover;
         cbRule789.setEnabled(changeRuleAllowd);
         cbRulePassOnce.setEnabled(changeRuleAllowd);
+        cbRuleKnocking.setEnabled(changeRuleAllowd);
         startGameBtn.setEnabled(phase == GAMEPHASE.waitForAttendees);
         stopGameBtn.setEnabled(phase != GAMEPHASE.waitForAttendees);
     }
@@ -131,6 +133,7 @@ public class GamePanel extends javax.swing.JPanel {
         cbWebradio = new javax.swing.JCheckBox();
         cbRule789 = new javax.swing.JCheckBox();
         cbRulePassOnce = new javax.swing.JCheckBox();
+        cbRuleKnocking = new javax.swing.JCheckBox();
         layoutDummy = new javax.swing.JPanel();
 
         miRemoveFromAttendees.setText("Remove from Attendees");
@@ -221,6 +224,17 @@ public class GamePanel extends javax.swing.JPanel {
         gridBagConstraints.gridx = 0;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         settingsPanel.add(cbRulePassOnce, gridBagConstraints);
+
+        cbRuleKnocking.setText("Rule Knocking");
+        cbRuleKnocking.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cbRuleKnockingActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        settingsPanel.add(cbRuleKnocking, gridBagConstraints);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
@@ -277,6 +291,10 @@ public class GamePanel extends javax.swing.JPanel {
         game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, cbRulePassOnce.isSelected());
     }//GEN-LAST:event_cbRulePassOnceActionPerformed
 
+    private void cbRuleKnockingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbRuleKnockingActionPerformed
+        game.setGameRuleEnabled(GAMERULE.Knocking, cbRuleKnocking.isSelected());
+    }//GEN-LAST:event_cbRuleKnockingActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup bgRule789;
@@ -284,6 +302,7 @@ public class GamePanel extends javax.swing.JPanel {
     private javax.swing.ButtonGroup bgWebRario;
     private javax.swing.JPanel buttonPanel;
     private javax.swing.JCheckBox cbRule789;
+    private javax.swing.JCheckBox cbRuleKnocking;
     private javax.swing.JCheckBox cbRulePassOnce;
     private javax.swing.JCheckBox cbWebradio;
     private javax.swing.JPanel layoutDummy;

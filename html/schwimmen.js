@@ -32,7 +32,9 @@ function openVideo() {
 
 function getVideoUrl() {
     var params = "userInfo.displayName=\"" + myName + "\"&config.prejoinPageEnabled=false";
-    return "https://meet.jit.si/" + videoRoomName + "#" + params;
+//    return "https://meet.jit.si/" + videoRoomName + "#" + params;
+//    changed Jitsi Server Name for German Vodafone customer
+    return "https://meet.ffmuc.net/" + videoRoomName + "#" + params;
 }
 
 function logoff() {

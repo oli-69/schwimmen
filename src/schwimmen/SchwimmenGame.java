@@ -52,7 +52,11 @@ public class SchwimmenGame extends CardGame {
          * This game rule enables the playeres are allowed to pass only once per
          * round
          */
-        passOnlyOncePerRound
+        passOnlyOncePerRound,
+        /**
+         * This game rule enables the round ending after 2nd knock
+         */
+        Knocking
     }
 
     /**
@@ -265,7 +269,7 @@ public class SchwimmenGame extends CardGame {
         player.addPropertyChangeListener(playerListener);
         players.add(player);
         firePropertyChange(PROP_PLAYERLIST, null, players);
-        String msg = player.getName() + " ist dazu gekommen";
+        String msg = player.getName() + " ist dazugekommen";
         chat(msg);
         LOGGER.info(msg);
         if (gamePhase == GAMEPHASE.waitForAttendees) {
@@ -812,18 +816,41 @@ public class SchwimmenGame extends CardGame {
                 }
             }
         }
-        int maxPrio = -1;
-        for (SchwimmenPlayer looser : loosers) {
-            int knockPrio = round.getKnockPriority(looser);
-            if (knockPrio > maxPrio) {
-                payers.clear();
-                maxPrio = knockPrio;
+
+        if (isGameRuleEnabled(GAMERULE.Knocking)) {
+            int maxPrio = -1;
+            for (SchwimmenPlayer looser : loosers) {
+                int knockPrio = round.getKnockPriority(looser);
+                if (knockPrio > maxPrio) {
+                    payers.clear();
+                    maxPrio = knockPrio;
+                }
+                if (knockPrio >= maxPrio) {
+                    payers.add(looser);
+                }
             }
-            if (knockPrio >= maxPrio) {
-                payers.add(looser);
+            return payers;
+
+        } else {
+            payers.clear();
+            payers.addAll(loosers);
+
+            if (loosers.size() == attendees.size()) {
+                // all currently playing attendees are loosers
+                // if all loosers are already swimming then
+                // do not return payers
+                int sumLooserGameToken = 0;
+
+                for (SchwimmenPlayer looser : loosers) {
+                    // sum over all looser game token
+                    sumLooserGameToken += looser.getGameTokens();
+                }
+                if (sumLooserGameToken == 0) {
+                    payers.clear();
+                }
             }
+            return payers;
         }
-        return payers;
     }
 
     private List<SchwimmenPlayer> findRoundLeavers(List<SchwimmenPlayer> payers) {
