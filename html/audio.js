@@ -1,5 +1,5 @@
 var sound;
-var radioUrl = "https://onlineradiobox.com/json/de/radioseefunk/play?platform=web";
+var radioUrl = "https://onlineradiobox.com/json/de/radioseefunk/play?platform=web"; // fallback
 
 function SoundFiles() {
     this.chat = new Audio();
@@ -100,6 +100,18 @@ function loadAudio(readyFunction) {
 
 function  toogleWebRadio() {
     setWebRadioPlaying(sound.radio.paused);
+}
+
+function setWebRadioUrl(url) {
+    console.log("setWebRadioUrl: " + url);
+    if (url !== undefined && url !== null) {
+        radioUrl = url;
+        if(!sound.radio.paused) {
+            // restart the radio
+            toogleWebRadio();
+            toogleWebRadio();
+        }
+    }
 }
 
 function setWebRadioPlaying(playing) {

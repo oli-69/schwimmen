@@ -143,6 +143,9 @@ function onServerMessage(data) {
         case "playWebradio":
             setWebRadioPlaying(message.play);
             break;
+        case "radioUrl":
+            setWebRadioUrl(message.url);
+            break;
         case "loginSuccess":
             onLoginSuccess(message);
             break;

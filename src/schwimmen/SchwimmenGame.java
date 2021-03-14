@@ -31,6 +31,7 @@ import schwimmen.messages.PlayerStack;
 import schwimmen.messages.StackSwap;
 import schwimmen.messages.ViewerStack;
 import schwimmen.messages.ViewerStackList;
+import schwimmen.messages.WebradioUrl;
 
 /**
  * This class implements the game rules and evaluates the player's decisions.
@@ -136,6 +137,7 @@ public class SchwimmenGame extends CardGame {
     public static final String PROP_PLAYER_ONLINE = "playerOnline";
     public static final String PROP_VIEWER_MAP = "viewerMap";
     public static final String PROP_WEBRADIO_PLAYING = "webradioPlaying";
+    public static final String PROP_WEBRADIO_URL = "webradioUrl";
     public static final String PROP_GAMERULE = "gameRule";
 
     private final PlayerIdComparator playerIdComparator;
@@ -155,6 +157,7 @@ public class SchwimmenGame extends CardGame {
     private final String videoRoomName;
     private final Set<GAMERULE> gameRules;
     private final CardDealService cardDealService;
+    private final List<WebradioUrl> webradioList;
 
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
     private int[] allAttendees; // IDs of players at start of the game (alive + death).
@@ -164,6 +167,7 @@ public class SchwimmenGame extends CardGame {
     private DiscoverMessage discoverMessage = null;
     private Finish31OnDealMessage finish31OnDealMessage = null;
     private boolean webradioPlaying = true;
+    private WebradioUrl radioUrl = null;
     private int finishSoundIdCursor = 0;
     private int finishSoundId = 0;
 
@@ -172,26 +176,24 @@ public class SchwimmenGame extends CardGame {
      */
     public SchwimmenGame() {
         this(Collections.synchronizedList(new ArrayList<>()), Collections.synchronizedList(new ArrayList<>()),
-                "", new CardDealServiceImpl());
+                "", new CardDealServiceImpl(), new ArrayList<>());
     }
 
     /**
      * Constructor. Creates an instance of this class from given Value.
      *
      * @param conferenceName the room name for the jitsi conference
+     * @param webradioList list of known webradios
      */
-    public SchwimmenGame(String conferenceName) {
+    public SchwimmenGame(String conferenceName, List<WebradioUrl> webradioList) {
         this(Collections.synchronizedList(new ArrayList<>()), Collections.synchronizedList(new ArrayList<>()),
-                conferenceName, new CardDealServiceImpl());
+                conferenceName, new CardDealServiceImpl(), webradioList);
     }
 
     /**
      * Package protected constructor. Required for unit testing.
-     *
-     * @param gameStack injected game stack.
-     * @param conferenceName the room name for the jitsi conference
      */
-    SchwimmenGame(List<Card> gameStack, List<Card> dealerStack, String conferenceName, CardDealService cardDealService) {
+    SchwimmenGame(List<Card> gameStack, List<Card> dealerStack, String conferenceName, CardDealService cardDealService, List<WebradioUrl> webradioList) {
         super(CARDS_32);
         players = Collections.synchronizedList(new ArrayList<>());
         playerIdComparator = new PlayerIdComparator(players);
@@ -212,6 +214,10 @@ public class SchwimmenGame extends CardGame {
         initFinishSoundIds();
         videoRoomName = conferenceName;
         this.cardDealService = cardDealService;
+        this.webradioList = webradioList;
+        if (!webradioList.isEmpty()) {
+            radioUrl = webradioList.iterator().next();
+        }
         super.addPropertyChangeListener(new GameChangeListener(this));
     }
 
@@ -245,6 +251,39 @@ public class SchwimmenGame extends CardGame {
      */
     public boolean isGameRuleEnabled(GAMERULE rule) {
         return gameRules.contains(rule);
+    }
+
+    /**
+     * Getter for property webradio url.
+     *
+     * @return the currently selected webradio url.
+     */
+    public WebradioUrl getRadioUrl() {
+        if (radioUrl == null) {
+            // fallback url
+            radioUrl = new WebradioUrl("Radio Seefunk", "https://onlineradiobox.com/json/de/radioseefunk/play?platform=web");
+        }
+        return radioUrl;
+    }
+
+    /**
+     * Setter for property webradio url
+     *
+     * @param url new value for webradio url.
+     */
+    public void setRadioUrl(WebradioUrl url) {
+        WebradioUrl oldValue = this.radioUrl;
+        this.radioUrl = url;
+        firePropertyChange(PROP_WEBRADIO_URL, oldValue, this.radioUrl);
+    }
+
+    /**
+     * Getter for property radio list.
+     *
+     * @return a list with the known webradios.
+     */
+    public List<WebradioUrl> getRadioList() {
+        return webradioList;
     }
 
     /**
@@ -394,7 +433,7 @@ public class SchwimmenGame extends CardGame {
         Finish31OnDealMessage finish31OnDeal = (gamePhase == GAMEPHASE.finish31OnDeal) ? finish31OnDealMessage : null;
         return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
                 gameStackProperties.getGameStack(), player.getStack(), getViewerStackList(player), isChangeStackAllowed(player),
-                isKnockAllowed(), isPassAllowed(player), discoverStacks, finish31OnDeal, webradioPlaying);
+                isKnockAllowed(), isPassAllowed(player), discoverStacks, finish31OnDeal, webradioPlaying, getRadioUrl());
     }
 
     /**
@@ -899,13 +938,13 @@ public class SchwimmenGame extends CardGame {
                             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
                             players.forEach(p -> p.reset());
                             players.forEach(p -> p.getSocket().sendString(gson.toJson(
-                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), webradioPlaying))));
+                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), webradioPlaying, getRadioUrl()))));
                             setGamePhase(GAMEPHASE.waitForAttendees);
                         } else {
                             players.forEach(p -> {
                                 p.getStack().clear();
                                 p.getSocket().sendString(gson.toJson(
-                                        new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), webradioPlaying)));
+                                        new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), webradioPlaying, getRadioUrl())));
                             }
                             );
                             setGamePhase(GAMEPHASE.shuffle);

@@ -2,6 +2,8 @@ package schwimmen;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -24,6 +26,7 @@ import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
 import schwimmen.SchwimmenGame.GAMERULE;
+import schwimmen.messages.WebradioUrl;
 import schwimmen.ui.SchwimmenFrame;
 
 /**
@@ -66,8 +69,9 @@ public class SchwimmenServer {
         LOGGER.info("using port " + port);
         String confName = settings.getProperty("jitsiConference");
         LOGGER.info("using conference name '" + confName + "'");
+
 //        confName = confName  + (System.currentTimeMillis() / 1000); // currently disabled, since Jitsi's iOS-App doesn't take the room name from the url.
-        SchwimmenGame game = new SchwimmenGame(confName);
+        SchwimmenGame game = new SchwimmenGame(confName, getWebradioList(settings));
         Server httpServer = new Server(port);
 
         ServletContextHandler context = new ServletContextHandler();
@@ -110,6 +114,18 @@ public class SchwimmenServer {
             installLookAndFeel();
             SwingUtilities.invokeLater(() -> new SchwimmenFrame(game).setVisible(true));
         }
+    }
+
+    private static List<WebradioUrl> getWebradioList(Properties settings) {
+        List<WebradioUrl> radioList = new ArrayList<>();
+        settings.stringPropertyNames().stream()
+                .filter(key -> key.startsWith("radio-url."))
+                .sorted()
+                .forEach(key -> {
+                    int i = Integer.parseInt(key.substring(key.indexOf(".") + 1));
+                    radioList.add(new WebradioUrl(settings.getProperty("radio." + i), settings.getProperty(key)));
+                });
+        return radioList;
     }
 
     private static void installLookAndFeel() {

@@ -24,17 +24,21 @@ public class GameStateMessage {
     public CardStack[] discoverStacks;
     public Finish31OnDealMessage finish31OnDealMessage;
     public boolean webradioPlaying;
+    public WebradioUrl radioUrl;
 
     public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
-            Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack, boolean webradioPlaying) {
+            Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack, 
+            boolean webradioPlaying, WebradioUrl radioUrl) {
         this(phase, players, attendees, allAttendees, viewerMap, mover, gameStack,
-                new ArrayList<>(), new ViewerStackList(), false, false, false, null, null, webradioPlaying);
+                new ArrayList<>(), new ViewerStackList(), false, false, false, null, null, 
+                webradioPlaying, radioUrl);
     }
 
     public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
             Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack,
             List<cardgame.Card> playerStack, ViewerStackList viewerStackList, boolean changeStackAllowed, boolean knockAllowed,
-            boolean passAllowed, List<DiscoverStack> discoverStacks, Finish31OnDealMessage finish31OnDealMessage, boolean webradioPlaying) {
+            boolean passAllowed, List<DiscoverStack> discoverStacks, Finish31OnDealMessage finish31OnDealMessage, 
+            boolean webradioPlaying, WebradioUrl radioUrl) {
         this.phase = phase;
         this.playerList = new PlayerList(players);
         this.attendeeList = new AttendeeList(attendees, allAttendees, mover);
@@ -51,5 +55,6 @@ public class GameStateMessage {
         }
         this.finish31OnDealMessage = finish31OnDealMessage;
         this.webradioPlaying = webradioPlaying;
+        this.radioUrl = radioUrl;
     }
 }

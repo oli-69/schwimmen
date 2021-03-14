@@ -1,21 +1,28 @@
 package schwimmen.ui;
 
 import java.awt.Component;
+import java.awt.event.ItemEvent;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeEvent;
 import java.util.List;
+import javax.swing.ComboBoxModel;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
+import javax.swing.ListCellRenderer;
 import javax.swing.ListModel;
 import javax.swing.SwingUtilities;
+import javax.swing.plaf.basic.BasicComboBoxRenderer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import schwimmen.SchwimmenGame;
 import schwimmen.SchwimmenGame.GAMEPHASE;
 import schwimmen.SchwimmenGame.GAMERULE;
 import schwimmen.SchwimmenPlayer;
+import schwimmen.messages.WebradioUrl;
 
 /**
  * Implements the main panel for the server side GUI. Created with NetBeans GUI
@@ -34,11 +41,11 @@ public class GamePanel extends javax.swing.JPanel {
     }
 
     public GamePanel(SchwimmenGame game) {
-        initComponents();
         this.game = game;
+        initComponents();
         this.game.addPropertyChangeListener(this::gamePropertyChanged);
         playerList.setCellRenderer(new PlayerRenderer());
-        cbWebradio.setSelected(game.isWebradioPlaying());
+        cbWebradioPlaying.setSelected(game.isWebradioPlaying());
         cbRule789.setSelected(game.isGameRuleEnabled(GAMERULE.newCardsOn789));
         cbRulePassOnce.setSelected(game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound));
         cbRuleKnocking.setSelected(game.isGameRuleEnabled(GAMERULE.Knocking));
@@ -49,6 +56,26 @@ public class GamePanel extends javax.swing.JPanel {
             playerListModel = new DefaultListModel<>();
         }
         return playerListModel;
+    }
+
+    private ListCellRenderer<WebradioUrl> getRadioCBModelRenderer() {
+        return new BasicComboBoxRenderer() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                Component component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (component instanceof JLabel) {
+                    ((JLabel) component).setText(((WebradioUrl) value).name);
+                }
+                return component;
+            }
+        };
+    }
+
+    private ComboBoxModel<WebradioUrl> getRadioCBModel() {
+        List<WebradioUrl> radioList = game.getRadioList();
+        return new DefaultComboBoxModel<>(radioList.toArray(new WebradioUrl[radioList.size()]));
     }
 
     private void gamePropertyChanged(PropertyChangeEvent evt) {
@@ -63,6 +90,8 @@ public class GamePanel extends javax.swing.JPanel {
             case SchwimmenGame.PROP_ATTENDEESLIST:
                 playerList.repaint();
                 checkAttendeesCount();
+            case SchwimmenGame.PROP_WEBRADIO_URL:
+                cbRadio.setSelectedItem(game.getRadioUrl());
             default:
                 break;
         }
@@ -130,10 +159,11 @@ public class GamePanel extends javax.swing.JPanel {
         startGameBtn = new javax.swing.JButton();
         stopGameBtn = new javax.swing.JButton();
         settingsPanel = new javax.swing.JPanel();
-        cbWebradio = new javax.swing.JCheckBox();
         cbRule789 = new javax.swing.JCheckBox();
         cbRulePassOnce = new javax.swing.JCheckBox();
         cbRuleKnocking = new javax.swing.JCheckBox();
+        cbWebradioPlaying = new javax.swing.JCheckBox();
+        cbRadio = new javax.swing.JComboBox<>();
         layoutDummy = new javax.swing.JPanel();
 
         miRemoveFromAttendees.setText("Remove from Attendees");
@@ -192,17 +222,6 @@ public class GamePanel extends javax.swing.JPanel {
         settingsPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Settings"));
         settingsPanel.setLayout(new java.awt.GridBagLayout());
 
-        cbWebradio.setText("Webradio");
-        cbWebradio.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                cbWebradioActionPerformed(evt);
-            }
-        });
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        settingsPanel.add(cbWebradio, gridBagConstraints);
-
         cbRule789.setText("Rule 789");
         cbRule789.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -235,6 +254,29 @@ public class GamePanel extends javax.swing.JPanel {
         gridBagConstraints.gridx = 0;
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         settingsPanel.add(cbRuleKnocking, gridBagConstraints);
+
+        cbWebradioPlaying.setText("Webradio");
+        cbWebradioPlaying.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                cbWebradioPlayingActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        settingsPanel.add(cbWebradioPlaying, gridBagConstraints);
+
+        cbRadio.setModel(getRadioCBModel());
+        cbRadio.setRenderer(getRadioCBModelRenderer());
+        cbRadio.addItemListener(new java.awt.event.ItemListener() {
+            public void itemStateChanged(java.awt.event.ItemEvent evt) {
+                cbRadioItemStateChanged(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        settingsPanel.add(cbRadio, gridBagConstraints);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
@@ -279,9 +321,9 @@ public class GamePanel extends javax.swing.JPanel {
         playerList.getSelectedValue().getSocket().close();
     }//GEN-LAST:event_miKickActionPerformed
 
-    private void cbWebradioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbWebradioActionPerformed
-        game.setWebRadioPlaying(cbWebradio.isSelected());
-    }//GEN-LAST:event_cbWebradioActionPerformed
+    private void cbWebradioPlayingActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbWebradioPlayingActionPerformed
+        game.setWebRadioPlaying(cbWebradioPlaying.isSelected());
+    }//GEN-LAST:event_cbWebradioPlayingActionPerformed
 
     private void cbRule789ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cbRule789ActionPerformed
         game.setGameRuleEnabled(GAMERULE.newCardsOn789, cbRule789.isSelected());
@@ -295,16 +337,23 @@ public class GamePanel extends javax.swing.JPanel {
         game.setGameRuleEnabled(GAMERULE.Knocking, cbRuleKnocking.isSelected());
     }//GEN-LAST:event_cbRuleKnockingActionPerformed
 
+    private void cbRadioItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbRadioItemStateChanged
+        if( evt.getStateChange() == ItemEvent.SELECTED) {
+            game.setRadioUrl((WebradioUrl) cbRadio.getSelectedItem());
+        }
+    }//GEN-LAST:event_cbRadioItemStateChanged
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup bgRule789;
     private javax.swing.ButtonGroup bgRulePassOnce;
     private javax.swing.ButtonGroup bgWebRario;
     private javax.swing.JPanel buttonPanel;
+    private javax.swing.JComboBox<WebradioUrl> cbRadio;
     private javax.swing.JCheckBox cbRule789;
     private javax.swing.JCheckBox cbRuleKnocking;
     private javax.swing.JCheckBox cbRulePassOnce;
-    private javax.swing.JCheckBox cbWebradio;
+    private javax.swing.JCheckBox cbWebradioPlaying;
     private javax.swing.JPanel layoutDummy;
     private javax.swing.JMenuItem miKick;
     private javax.swing.JMenuItem miRemoveFromAttendees;

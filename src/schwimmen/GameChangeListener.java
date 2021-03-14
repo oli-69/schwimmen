@@ -39,6 +39,9 @@ public class GameChangeListener implements PropertyChangeListener {
             case SchwimmenGame.PROP_WEBRADIO_PLAYING:
                 game.sendToPlayers("{\"action\":\"playWebradio\", \"play\": " + ((Boolean) evt.getNewValue()) + "}");
                 break;
+            case SchwimmenGame.PROP_WEBRADIO_URL:
+                game.sendToPlayers(gson.toJson(game.getRadioUrl()));
+                break;
             case SchwimmenGame.PROP_ATTENDEESLIST:
                 game.sendToPlayers(gson.toJson(new AttendeeList((List<SchwimmenPlayer>) evt.getNewValue(), game.getAllAttendees(), game.getMover())));
                 break;

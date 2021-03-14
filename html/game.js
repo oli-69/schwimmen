@@ -139,6 +139,7 @@ function onGameState(message) {
     $("#passMessage").html(msg);
     $("#stackSelectMessage").html(msg);
     onGamePhase(gamePhase);
+    setWebRadioUrl(message.radioUrl.url);
     if (!webradioStateLoaded) {
         setWebRadioPlaying(message.webradioPlaying);
         webradioStateLoaded = true;

@@ -75,7 +75,7 @@ public class SchwimmenGameTest {
         dealerStack = Collections.synchronizedList(new ArrayList<>());
         dealCardStacks = Arrays.asList(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         dealCardStacks.forEach(stack -> make25(stack));
-        game = new SchwimmenGame(gameStack, dealerStack, "", new CardDealServiceImpl());
+        game = new SchwimmenGame(gameStack, dealerStack, "", new CardDealServiceImpl(), new ArrayList<>());
         session1 = Mockito.mock(Session.class);
         session2 = Mockito.mock(Session.class);
         session3 = Mockito.mock(Session.class);
