@@ -102,10 +102,10 @@ public class SchwimmenServer {
         }, "Stop HttpServer Hook"));
         new PingWatchdog(game).start();
 
-        game.setWebRadioPlaying(Boolean.parseBoolean(settings.getProperty("webradioEnabled", "false")));
+        game.setWebRadioPlaying(Boolean.parseBoolean(settings.getProperty("webradioEnabled", "true")));
         game.setGameRuleEnabled(GAMERULE.newCardsOn789, Boolean.parseBoolean(settings.getProperty("rule789Enabled", "true")));
-        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, Boolean.parseBoolean(settings.getProperty("rulePassOnceEnabled", "true")));
-        game.setGameRuleEnabled(GAMERULE.Knocking, Boolean.parseBoolean(settings.getProperty("ruleKnockingEnabled", "false")));
+        game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, Boolean.parseBoolean(settings.getProperty("rulePassOnceEnabled", "false")));
+        game.setGameRuleEnabled(GAMERULE.Knocking, Boolean.parseBoolean(settings.getProperty("ruleKnockingEnabled", "true")));
         if (Boolean.parseBoolean(settings.getProperty("startUI", "true"))) {
             installLookAndFeel();
             SwingUtilities.invokeLater(() -> new SchwimmenFrame(game).setVisible(true));
