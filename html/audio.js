@@ -104,7 +104,7 @@ function  toogleWebRadio() {
 
 function setWebRadioUrl(url) {
     console.log("setWebRadioUrl: " + url);
-    if (url !== undefined && url !== null) {
+    if (url !== undefined && url !== null && url !== radioUrl) {
         radioUrl = url;
         if(!sound.radio.paused) {
             // restart the radio
