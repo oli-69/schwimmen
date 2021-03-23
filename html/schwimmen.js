@@ -86,7 +86,7 @@ function login() {
                 setTimeout(logf, time);
             }
         }
-    }
+    };
     setTimeout(logf, 0);
 }
 
@@ -161,7 +161,7 @@ function onServerMessage(data) {
             break;
         case "chatMessage":
             messageBuffer.push(function () {
-                onChatMessage(message)
+                onChatMessage(message);
             });
             break;
         case "loginError":

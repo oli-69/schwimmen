@@ -120,8 +120,8 @@ function onGameState(message) {
     players = message.playerList.players;
     attendees = message.attendeeList.attendees;
     allAttendees = message.attendeeList.allAttendees;
+    mover = message.attendeeList.mover;
     viewerMap = message.viewerMap.table;
-    mover = message.mover;
     gameStack = message.gameStack.cards;
     gameStackOffsets = message.gameStack.offset;
     gameStackRotations = message.gameStack.rotation;
@@ -290,7 +290,7 @@ function initDialogButtons() {
     }
     if (meIsMover) {
         $("#nextRoundBtn").show();
-        $("#startGameBtn").prop("disabled", attendees.length < 2);
+        $("#startGameBtn").prop("disabled", attendees === null || attendees === undefined || attendees.length < 2);
     } else {
         $("#nextRoundBtn").hide();
         $("#startGameBtn").prop("disabled", true);
@@ -496,6 +496,14 @@ function getShuffleCardsPosition(card) {
     };
 }
 
+function getRandomVariation(time, factor) {
+    if (factor === undefined) {
+        factor = 40.0;
+    }
+    var f = 1 + (Math.random() - 0.5) / 100.0 * factor;
+    return time * f;
+}
+
 function animateDealCards(readyFunction) {
     setGameDialogVisible($("#dealCardsDialog"), false);
     var cards = [];
@@ -530,16 +538,16 @@ function animateDealCards(readyFunction) {
     var delay = 400;
     for (var i = 0; i < cards.length; i++) {
         if (i === cards.length - 1) {
-            animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay, readyFunction);
+            animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * getRandomVariation(delay), readyFunction);
         } else {
-            animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * delay);
+            animateDealSingleCard(cards[i], pos.top, pos.left, props[i], i * getRandomVariation(delay));
         }
     }
 }
 
 function animateDealSingleCard(card, top, left, props, delay, readyFunction) {
     var distance = Math.abs(calculateDistanceBetweenPoints(left, top, parseFloat(props.x), parseFloat(props.y)));
-    var animTime = 1.75 * distance;
+    var animTime = getRandomVariation(1.75 * distance);
     card.prop("rot", 0);
     var animProps = {
         duration: animTime,
@@ -584,13 +592,13 @@ function animateSelectStack(isKeepStack, readyFunction) {
         attendeeStack.prepend(dealer2ndStack[2]);
         attendeeStack.prepend(dealer2ndStack[1]);
         attendeeStack.prepend(dealer2ndStack[0]);
-        var takeSpeed = 500;
+        var takeSpeed = getRandomVariation(500);
         animateTakeCard(takeSpeed, dealer2ndCards[0], playerCardProps[0]);
         animateTakeCard(takeSpeed, dealer2ndCards[1], playerCardProps[1]);
         animateTakeCard(takeSpeed, dealer2ndCards[2], playerCardProps[2], readyFunction);
     };
 
-    var giveSpeed = 1500;
+    var giveSpeed = getRandomVariation(1500);
     var trashCards = isKeepStack ? dealer2ndCards : playerCards;
     animateGiveCard(giveSpeed, trashCards[0], trashCardProps[0], 0);
     animateGiveCard(giveSpeed, trashCards[1], trashCardProps[1], 0);
@@ -599,7 +607,7 @@ function animateSelectStack(isKeepStack, readyFunction) {
 
 /* New Cards */
 function animateStackChange(readyFunction) {
-    var speed = 2500;
+    var speed = getRandomVariation(2500);
     $("#swapCardBtn").prop("disabled", true);
     $("#swapAllCardsBtn").prop("disabled", true);
     $("#passBtn").prop("disabled", true);
@@ -655,7 +663,7 @@ function animateAllCardsSwap(readyFunction) {
     };
 
     var reverse = function () {
-        var giveSpeed = 1500;
+        var giveSpeed = getRandomVariation(1500);
         animateGiveCard(giveSpeed, playerCards[0], reverseTargetProps[0], 0);
         animateGiveCard(giveSpeed, playerCards[1], reverseTargetProps[1], 0);
         animateGiveCard(giveSpeed, playerCards[2], reverseTargetProps[2], 0, finish);
@@ -665,7 +673,7 @@ function animateAllCardsSwap(readyFunction) {
     attendeeStack.prepend(gameCards[2]);
     attendeeStack.prepend(gameCards[1]);
     attendeeStack.prepend(gameCards[0]);
-    var takeSpeed = 2500;
+    var takeSpeed = getRandomVariation(2500);
     animateTakeCard(takeSpeed, gameCards[0], playerCardProps[0]);
     animateTakeCard(takeSpeed, gameCards[1], playerCardProps[1]);
     animateTakeCard(takeSpeed, gameCards[2], playerCardProps[2], reverse);
@@ -698,11 +706,11 @@ function animateCardSwap(takenId, givenId, readyFunction) {
     };
     var targetProps = getGameStackProperties(takenId, tSvg, gameStack);
     var reverse = function () {
-        animateGiveCard(1500, gSvg, targetProps, cardFlips[takenId], finish);
+        animateGiveCard(getRandomVariation(1500), gSvg, targetProps, cardFlips[takenId], finish);
     };
     sound.click.play();
     tSvg.insertBefore(gSvg);
-    animateTakeCard(2500, tSvg, gProps, reverse);
+    animateTakeCard(getRandomVariation(2500), tSvg, gProps, reverse);
 }
 
 function animateGiveCard(speed, card, targetProps, cardFlips, finish) {
