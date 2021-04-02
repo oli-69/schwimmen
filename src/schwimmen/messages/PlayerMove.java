@@ -1,5 +1,6 @@
 package schwimmen.messages;
 
+import cardgame.messages.GameStack;
 import schwimmen.SchwimmenGame.MOVE;
 
 public class PlayerMove {

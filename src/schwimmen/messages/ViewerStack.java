@@ -1,12 +1,13 @@
 package schwimmen.messages;
 
-import schwimmen.SchwimmenPlayer;
+import cardgame.messages.CardStack;
+import cardgame.Player;
 
 public class ViewerStack extends CardStack {
 
     public String name;
 
-    public ViewerStack(SchwimmenPlayer player) {
+    public ViewerStack(Player player) {
         super(player.getStack());
         this.name = player.getName();
     }

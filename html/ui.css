@@ -52,35 +52,44 @@ main {
 #chatContainer{
     display: flex;
     flex-direction: row;
-    width:100%;
+    justify-content: center;
     margin-top: 0.25em;
 }
 #chatContainerLeft{
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
+    width:100%;
 }
 #chatContainerRight{
     display: flex;
     flex-direction: column;
-    flex-grow: 0;
     margin-right: 1em;        
 }
 
 #chatArea{
     font-family: arial, helvetica, sans-serif;
     font-size: 0.8em;
+    text-align: left;
     right:1em;
     height: 3em;
     border-radius: 5px;
-    border-color: darkgray;
+    border: darkgray 1px solid;
     background-color: black;
     color: white;
     margin: 0.5em;
+    overflow: auto;
+    padding: 0.5em;
+}
+.chatMsgSender{
+    font-weight: bold;
+    color: white;
+}
+.chatMsgTxt{
+    color: silver;
 }
 #chatMessage {
     border-radius: 5px;
-    border-color: darkgray;
+    border: darkgray 1px solid;
     margin-top: 0;
     margin-right: 0.5em;
     margin-left: 0.5em;
@@ -367,6 +376,9 @@ main {
         margin-bottom: 0.5em;    
     }
     #logoffBtn, #chatBtn, #videoBtn{
+    }
+    #chatContainerLeft{
+        max-width:40em;
     }
     #chatContainerRight{
         margin-bottom: 0em;        

@@ -1,5 +1,6 @@
 package schwimmen.messages;
 
+import cardgame.messages.Card;
 import java.util.List;
 
 public class StackSwap {

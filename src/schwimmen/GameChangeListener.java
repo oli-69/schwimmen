@@ -1,14 +1,15 @@
 package schwimmen;
 
+import cardgame.Player;
 import com.google.gson.Gson;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.List;
 import schwimmen.SchwimmenGame.GAMEPHASE;
-import schwimmen.messages.AttendeeList;
+import cardgame.messages.AttendeeList;
 import schwimmen.messages.GamePhase;
-import schwimmen.messages.PlayerList;
-import schwimmen.messages.PlayerOnline;
+import cardgame.messages.PlayerList;
+import cardgame.messages.PlayerOnline;
 import schwimmen.messages.ViewerMap;
 
 /**
@@ -43,15 +44,15 @@ public class GameChangeListener implements PropertyChangeListener {
                 game.sendToPlayers(gson.toJson(game.getRadioUrl()));
                 break;
             case SchwimmenGame.PROP_ATTENDEESLIST:
-                game.sendToPlayers(gson.toJson(new AttendeeList((List<SchwimmenPlayer>) evt.getNewValue(), game.getAllAttendees(), game.getMover())));
+                game.sendToPlayers(gson.toJson(new AttendeeList((List<Player>) evt.getNewValue(), game.getAllAttendees(), game.getMover())));
                 break;
             case SchwimmenGame.PROP_PLAYERLIST:
-                game.sendToPlayers(gson.toJson(new PlayerList((List<SchwimmenPlayer>) evt.getNewValue())));
+                game.sendToPlayers(gson.toJson(new PlayerList((List<Player>) evt.getNewValue())));
                 break;
             case SchwimmenGame.PROP_PLAYER_ONLINE:
-                SchwimmenPlayer player = (SchwimmenPlayer) evt.getNewValue();
+                Player player = (Player) evt.getNewValue();
                 if (player.isOnline()) {
-                    player.getSocket().sendString(gson.toJson(game.getGameState(player)));
+                    player.getSocket().sendString(game.getGameState(player));
                 }
                 game.sendToPlayers(gson.toJson(new PlayerOnline(player)));
                 break;
@@ -64,7 +65,7 @@ public class GameChangeListener implements PropertyChangeListener {
     }
 
     private GamePhase getMessageForPhase(GAMEPHASE phase) {
-        SchwimmenPlayer actor = game.getMover();
+        Player actor = game.getMover();
         switch (phase) {
             case discover:
                 return new GamePhase(game.getDiscoverMessage(), actor);

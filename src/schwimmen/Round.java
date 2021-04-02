@@ -1,6 +1,7 @@
 package schwimmen;
 
 import cardgame.Card;
+import cardgame.Player;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -15,16 +16,16 @@ import schwimmen.messages.PlayerMove;
  */
 public class Round {
 
-    public SchwimmenPlayer dealer; // the card dealer of this round.
-    public SchwimmenPlayer finisher; // filled if the round ended by knocking
-    public SchwimmenPlayer knocker1;
-    public SchwimmenPlayer knocker2;
+    public Player dealer; // the card dealer of this round.
+    public Player finisher; // filled if the round ended by knocking
+    public Player knocker1;
+    public Player knocker2;
     public float finishScore; // filled, if the game ended by 31 or fire.
     public int moveCount; // counter used by game rules.
-    public List<SchwimmenPlayer> leavers = new ArrayList<>(); // leavers after this round, meaning payed and death
+    public List<Player> leavers = new ArrayList<>(); // leavers after this round, meaning payed and death
 
-    private final List<SchwimmenPlayer> passSequence = new ArrayList<>(); // list of players passing in a row (used by game rules)
-    private final Set<SchwimmenPlayer> passers = new HashSet<>(); // list of players having passed once in this round (used by game rules)
+    private final List<Player> passSequence = new ArrayList<>(); // list of players passing in a row (used by game rules)
+    private final Set<Player> passers = new HashSet<>(); // list of players having passed once in this round (used by game rules)
     private final SchwimmenGame game; // reference to the game.
 
     /**
@@ -41,7 +42,7 @@ public class Round {
      *
      * @param dealer card dealer of this round.
      */
-    public void reset(SchwimmenPlayer dealer) {
+    public void reset(Player dealer) {
         this.dealer = dealer;
         finisher = null;
         knocker1 = null;
@@ -72,7 +73,7 @@ public class Round {
      *
      * @param player current player.
      */
-    public void pass(SchwimmenPlayer player) {
+    public void pass(Player player) {
         passSequence.add(player);
         passers.add(player);
     }
@@ -105,7 +106,7 @@ public class Round {
      * new cards if all players passed in a row, or the 7-8-9 rule), false
      * otherwise.
      */
-    public boolean isChangeStackAllowed(SchwimmenPlayer player, List<Card> gameStack) {
+    public boolean isChangeStackAllowed(Player player, List<Card> gameStack) {
         boolean allPlayersPassed = !passSequence.isEmpty() && !(passSequence.size() < game.getAttendeesCount());
         boolean is_7_8_9 = game.is7_8_9(gameStack) && game.isGameRuleEnabled(GAMERULE.newCardsOn789);
         return player.equals(game.getMover()) && (allPlayersPassed || is_7_8_9);
@@ -118,7 +119,7 @@ public class Round {
      * @return true it the specified player is allowed to pass. Can be false, if
      * the game rule pass-once is enabled.
      */
-    public boolean isPassAllowed(SchwimmenPlayer player) {
+    public boolean isPassAllowed(Player player) {
         boolean isAllowed = (!game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound)) || !passers.contains(player);
         return player.equals(game.getMover()) && isAllowed;
     }
@@ -128,18 +129,16 @@ public class Round {
      *
      * @param player the knocking player.
      */
-    public void knock(SchwimmenPlayer player) {
+    public void knock(Player player) {
         if (knocker1 != null) {
             // this is 2nd knock
-            if( game.isGameRuleEnabled(GAMERULE.Knocking) ) {
+            if (game.isGameRuleEnabled(GAMERULE.Knocking)) {
                 // 2nd knock rule is enabled
                 // knock could be from other player or first knocker
-            knocker2 = player;
-        } else {
-                if ( player.equals(knocker1) ) {
-                    // if 2nd knock is from first knocker (round end)
-                    knocker2 = player;
-                }
+                knocker2 = player;
+            } else if (player.equals(knocker1)) {
+                // if 2nd knock is from first knocker (round end)
+                knocker2 = player;
             }
         } else {
             // this is 1st knock
@@ -170,7 +169,7 @@ public class Round {
      * @return 2 (highest) if the player did first knock, 1 if the player did
      * the 2nd knock, 0 otherwise.
      */
-    public int getKnockPriority(SchwimmenPlayer player) {
+    public int getKnockPriority(Player player) {
         if (player.equals(knocker1)) {
             return 2;
         }

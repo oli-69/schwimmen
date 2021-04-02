@@ -1,10 +1,15 @@
 package schwimmen.messages;
 
+import cardgame.Player;
+import cardgame.messages.AttendeeList;
+import cardgame.messages.CardStack;
+import cardgame.messages.GameStack;
+import cardgame.messages.PlayerList;
+import cardgame.messages.WebradioUrl;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import schwimmen.SchwimmenPlayer;
 
 public class GameStateMessage {
 
@@ -14,7 +19,6 @@ public class GameStateMessage {
     public PlayerList playerList;
     public AttendeeList attendeeList;
     public ViewerMap viewerMap;
-    public String mover;
     public GameStack gameStack;
     public CardStack playerStack;
     public ViewerStackList viewerStackList;
@@ -26,16 +30,16 @@ public class GameStateMessage {
     public boolean webradioPlaying;
     public WebradioUrl radioUrl;
 
-    public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
-            Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack, 
+    public GameStateMessage(String phase, List<Player> players, List<Player> attendees, int[] allAttendees,
+            Map<Player, Collection<Player>> viewerMap, Player mover, GameStack gameStack, 
             boolean webradioPlaying, WebradioUrl radioUrl) {
         this(phase, players, attendees, allAttendees, viewerMap, mover, gameStack,
                 new ArrayList<>(), new ViewerStackList(), false, false, false, null, null, 
                 webradioPlaying, radioUrl);
     }
 
-    public GameStateMessage(String phase, List<SchwimmenPlayer> players, List<SchwimmenPlayer> attendees, int[] allAttendees,
-            Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> viewerMap, SchwimmenPlayer mover, GameStack gameStack,
+    public GameStateMessage(String phase, List<Player> players, List<Player> attendees, int[] allAttendees,
+            Map<Player, Collection<Player>> viewerMap, Player mover, GameStack gameStack,
             List<cardgame.Card> playerStack, ViewerStackList viewerStackList, boolean changeStackAllowed, boolean knockAllowed,
             boolean passAllowed, List<DiscoverStack> discoverStacks, Finish31OnDealMessage finish31OnDealMessage, 
             boolean webradioPlaying, WebradioUrl radioUrl) {
@@ -43,7 +47,6 @@ public class GameStateMessage {
         this.playerList = new PlayerList(players);
         this.attendeeList = new AttendeeList(attendees, allAttendees, mover);
         this.viewerMap = new ViewerMap(viewerMap);
-        this.mover = mover != null ? mover.getName() : "";
         this.gameStack = gameStack;
         this.playerStack = new CardStack(playerStack);
         this.viewerStackList = viewerStackList;

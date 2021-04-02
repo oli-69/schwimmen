@@ -1,7 +1,7 @@
 package schwimmen.messages;
 
+import cardgame.Player;
 import java.util.List;
-import schwimmen.SchwimmenPlayer;
 
 public class DiscoverMessage {
 
@@ -14,8 +14,8 @@ public class DiscoverMessage {
     public int remainingAttendeesCount;
     public int finishSoundId;
 
-    public DiscoverMessage(SchwimmenPlayer finisher, float finisherScore, SchwimmenPlayer finishKnocker, List<DiscoverStack> playerStacks,
-            List<SchwimmenPlayer> payers, List<SchwimmenPlayer> leavers, int finishSoundId) {
+    public DiscoverMessage(Player finisher, float finisherScore, Player finishKnocker, List<DiscoverStack> playerStacks,
+            List<Player> payers, List<Player> leavers, int finishSoundId) {
         this.finisherScore = finisherScore;
         this.playerStacks = playerStacks.toArray(new DiscoverStack[playerStacks.size()]);
         this.payers = getNames(payers);
@@ -31,7 +31,7 @@ public class DiscoverMessage {
         this.finishSoundId = finishSoundId;
     }
 
-    private String[] getNames(List<SchwimmenPlayer> players) {
+    private String[] getNames(List<Player> players) {
         if (players != null && !players.isEmpty()) {
             String[] names = new String[players.size()];
             for (int i = 0; i < names.length; i++) {

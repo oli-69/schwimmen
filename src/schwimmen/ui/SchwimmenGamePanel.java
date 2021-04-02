@@ -1,5 +1,9 @@
 package schwimmen.ui;
 
+import cardgame.CardGame;
+import cardgame.Player;
+import cardgame.messages.WebradioUrl;
+import cardgame.ui.GamePanel;
 import java.awt.Component;
 import java.awt.event.ItemEvent;
 import java.awt.event.MouseEvent;
@@ -9,7 +13,6 @@ import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.ListCellRenderer;
@@ -21,26 +24,24 @@ import org.apache.logging.log4j.Logger;
 import schwimmen.SchwimmenGame;
 import schwimmen.SchwimmenGame.GAMEPHASE;
 import schwimmen.SchwimmenGame.GAMERULE;
-import schwimmen.SchwimmenPlayer;
-import schwimmen.messages.WebradioUrl;
 
 /**
  * Implements the main panel for the server side GUI. Created with NetBeans GUI
  * Editor.
  */
-public class GamePanel extends javax.swing.JPanel {
+public class SchwimmenGamePanel extends GamePanel {
 
-    private static final Logger LOGGER = LogManager.getLogger(GamePanel.class);
+    private static final Logger LOGGER = LogManager.getLogger(SchwimmenGamePanel.class);
     private static final long serialVersionUID = 1L;
 
-    DefaultListModel<SchwimmenPlayer> playerListModel;
+    DefaultListModel<Player> playerListModel;
     SchwimmenGame game;
 
-    public GamePanel() {
+    public SchwimmenGamePanel() {
         this(new SchwimmenGame());
     }
 
-    public GamePanel(SchwimmenGame game) {
+    public SchwimmenGamePanel(SchwimmenGame game) {
         this.game = game;
         initComponents();
         this.game.addPropertyChangeListener(this::gamePropertyChanged);
@@ -51,7 +52,12 @@ public class GamePanel extends javax.swing.JPanel {
         cbRuleKnocking.setSelected(game.isGameRuleEnabled(GAMERULE.Knocking));
     }
 
-    private ListModel<SchwimmenPlayer> getListPlayerListModel() {
+    @Override
+    public CardGame getGame() {
+        return game;
+    }
+
+    private ListModel<Player> getListPlayerListModel() {
         if (playerListModel == null) {
             playerListModel = new DefaultListModel<>();
         }
@@ -59,17 +65,10 @@ public class GamePanel extends javax.swing.JPanel {
     }
 
     private ListCellRenderer<WebradioUrl> getRadioCBModelRenderer() {
-        return new BasicComboBoxRenderer() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                Component component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                if (component instanceof JLabel) {
-                    ((JLabel) component).setText(((WebradioUrl) value).name);
-                }
-                return component;
-            }
+        final BasicComboBoxRenderer delegateRenderer = new BasicComboBoxRenderer();
+        return (JList<? extends WebradioUrl> list, WebradioUrl value, int index, boolean isSelected, boolean cellHasFocus) -> {
+            return delegateRenderer.getListCellRendererComponent(
+                    list, (value != null ? value.name : value), index, isSelected, cellHasFocus);
         };
     }
 
@@ -80,17 +79,17 @@ public class GamePanel extends javax.swing.JPanel {
 
     private void gamePropertyChanged(PropertyChangeEvent evt) {
         switch (evt.getPropertyName()) {
-            case SchwimmenGame.PROP_PLAYERLIST:
+            case CardGame.PROP_PLAYERLIST:
                 initPlayerList();
                 break;
-            case SchwimmenGame.PROP_GAMEPHASE:
+            case CardGame.PROP_GAMEPHASE:
                 initGamePhase((GAMEPHASE) evt.getNewValue());
                 break;
-            case SchwimmenGame.PROP_PLAYER_ONLINE:
-            case SchwimmenGame.PROP_ATTENDEESLIST:
+            case CardGame.PROP_PLAYER_ONLINE:
+            case CardGame.PROP_ATTENDEESLIST:
                 playerList.repaint();
                 checkAttendeesCount();
-            case SchwimmenGame.PROP_WEBRADIO_URL:
+            case CardGame.PROP_WEBRADIO_URL:
                 cbRadio.setSelectedItem(game.getRadioUrl());
             default:
                 break;
@@ -99,7 +98,7 @@ public class GamePanel extends javax.swing.JPanel {
 
     private void initPlayerList() {
         SwingUtilities.invokeLater(() -> {
-            List<SchwimmenPlayer> players = game.getPlayerList();
+            List<Player> players = game.getPlayerList();
             playerListModel.clear();
             players.forEach(player -> {
                 playerListModel.addElement(player);
@@ -109,7 +108,9 @@ public class GamePanel extends javax.swing.JPanel {
     }
 
     private void checkAttendeesCount() {
-        startGameBtn.setEnabled(game.getAttendeesCount() > 0);
+        boolean enabled = game.getAttendeesCount() > 0 && game.getGamePhase() == GAMEPHASE.waitForAttendees;
+        startGameBtn.setEnabled(enabled);
+        shufflePlayerBtn.setEnabled(enabled);
     }
 
     private void initGamePhase(GAMEPHASE phase) {
@@ -119,6 +120,7 @@ public class GamePanel extends javax.swing.JPanel {
         cbRuleKnocking.setEnabled(changeRuleAllowd);
         startGameBtn.setEnabled(phase == GAMEPHASE.waitForAttendees);
         stopGameBtn.setEnabled(phase != GAMEPHASE.waitForAttendees);
+        shufflePlayerBtn.setEnabled(phase == GAMEPHASE.waitForAttendees);
     }
 
     private class PlayerRenderer extends DefaultListCellRenderer {
@@ -127,7 +129,7 @@ public class GamePanel extends javax.swing.JPanel {
 
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-            SchwimmenPlayer player = (SchwimmenPlayer) value;
+            Player player = (Player) value;
             String text = player.getName().concat(String.format(" - %s", (game.isAttendee(player) ? "spielt mit" : "spielt nicht mit")));
             Component renderer = super.getListCellRendererComponent(list, text, index, isSelected, cellHasFocus);
             renderer.setEnabled(player.isOnline());
@@ -158,6 +160,7 @@ public class GamePanel extends javax.swing.JPanel {
         buttonPanel = new javax.swing.JPanel();
         startGameBtn = new javax.swing.JButton();
         stopGameBtn = new javax.swing.JButton();
+        shufflePlayerBtn = new javax.swing.JButton();
         settingsPanel = new javax.swing.JPanel();
         cbRule789 = new javax.swing.JCheckBox();
         cbRulePassOnce = new javax.swing.JCheckBox();
@@ -214,6 +217,15 @@ public class GamePanel extends javax.swing.JPanel {
             }
         });
         buttonPanel.add(stopGameBtn);
+
+        shufflePlayerBtn.setText("Spieler umsetzen");
+        shufflePlayerBtn.setEnabled(false);
+        shufflePlayerBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                shufflePlayerBtnActionPerformed(evt);
+            }
+        });
+        buttonPanel.add(shufflePlayerBtn);
 
         southPanel.add(buttonPanel);
 
@@ -303,7 +315,7 @@ public class GamePanel extends javax.swing.JPanel {
 
     private void playerListMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_playerListMouseClicked
         if (evt.getButton() == MouseEvent.BUTTON3) {
-            SchwimmenPlayer selectedPlayer = playerList.getSelectedValue();
+            Player selectedPlayer = playerList.getSelectedValue();
             if (selectedPlayer != null) {
                 boolean isWaitForAttendees = game.getGamePhase() == GAMEPHASE.waitForAttendees;
                 boolean isAttendee = game.isAttendee(selectedPlayer);
@@ -338,10 +350,16 @@ public class GamePanel extends javax.swing.JPanel {
     }//GEN-LAST:event_cbRuleKnockingActionPerformed
 
     private void cbRadioItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbRadioItemStateChanged
-        if( evt.getStateChange() == ItemEvent.SELECTED) {
+        if (evt.getStateChange() == ItemEvent.SELECTED) {
             game.setRadioUrl((WebradioUrl) cbRadio.getSelectedItem());
         }
     }//GEN-LAST:event_cbRadioItemStateChanged
+
+    private void shufflePlayerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_shufflePlayerBtnActionPerformed
+        if (game.getGamePhase() == GAMEPHASE.waitForAttendees) {
+            game.shufflePlayers();
+        }
+    }//GEN-LAST:event_shufflePlayerBtnActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -357,10 +375,11 @@ public class GamePanel extends javax.swing.JPanel {
     private javax.swing.JPanel layoutDummy;
     private javax.swing.JMenuItem miKick;
     private javax.swing.JMenuItem miRemoveFromAttendees;
-    private javax.swing.JList<SchwimmenPlayer> playerList;
+    private javax.swing.JList<Player> playerList;
     private javax.swing.JScrollPane playerListScrollPanel;
     private javax.swing.JPopupMenu pmPlayers;
     private javax.swing.JPanel settingsPanel;
+    private javax.swing.JButton shufflePlayerBtn;
     private javax.swing.JPanel southPanel;
     private javax.swing.JButton startGameBtn;
     private javax.swing.JButton stopGameBtn;

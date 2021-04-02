@@ -1,18 +1,12 @@
 package schwimmen;
 
+import cardgame.GameServer;
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
-import java.util.Timer;
-import java.util.TimerTask;
 import javax.swing.SwingUtilities;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.apache.logging.log4j.core.config.DefaultConfiguration;
 import org.eclipse.jetty.http.pathmap.ServletPathSpec;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -26,19 +20,15 @@ import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
 import schwimmen.SchwimmenGame.GAMERULE;
-import schwimmen.messages.WebradioUrl;
-import schwimmen.ui.SchwimmenFrame;
+import schwimmen.ui.SchwimmenGamePanel;
+import cardgame.ui.GameFrame;
 
 /**
  * This class represents the SchwimmenServer. It implements the static main
  * entry point to start the application.
  */
-public class SchwimmenServer {
+public class SchwimmenServer extends GameServer {
 
-    static {
-        Configurator.initialize(new DefaultConfiguration());
-        Configurator.setRootLevel(Level.DEBUG);
-    }
     private static final Logger LOGGER = LogManager.getLogger(SchwimmenServer.class);
 
     /**
@@ -112,27 +102,7 @@ public class SchwimmenServer {
         game.setGameRuleEnabled(GAMERULE.Knocking, Boolean.parseBoolean(settings.getProperty("ruleKnockingEnabled", "true")));
         if (Boolean.parseBoolean(settings.getProperty("startUI", "true"))) {
             installLookAndFeel();
-            SwingUtilities.invokeLater(() -> new SchwimmenFrame(game).setVisible(true));
-        }
-    }
-
-    private static List<WebradioUrl> getWebradioList(Properties settings) {
-        List<WebradioUrl> radioList = new ArrayList<>();
-        settings.stringPropertyNames().stream()
-                .filter(key -> key.startsWith("radio-url."))
-                .sorted()
-                .forEach(key -> {
-                    int i = Integer.parseInt(key.substring(key.indexOf(".") + 1));
-                    radioList.add(new WebradioUrl(settings.getProperty("radio." + i), settings.getProperty(key)));
-                });
-        return radioList;
-    }
-
-    private static void installLookAndFeel() {
-        try {
-            javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
-            LOGGER.error(ex);
+            SwingUtilities.invokeLater(() -> new GameFrame(new SchwimmenGamePanel(game)).setVisible(true));
         }
     }
 
@@ -149,32 +119,6 @@ public class SchwimmenServer {
         @Override
         public Object createWebSocket(ServletUpgradeRequest req, ServletUpgradeResponse resp) {
             return new SchwimmenSocket(game, configPath);
-        }
-    }
-
-    private static final class PingWatchdog {
-
-        private final SchwimmenGame game;
-        private final long interval = 1000 * 60 * 3;
-        private final Timer timer;
-
-        public PingWatchdog(SchwimmenGame game) {
-            this.game = game;
-            timer = new Timer("ServerWatchdog");
-        }
-
-        public void start() {
-            timer.schedule(getTask(), interval);
-        }
-
-        private TimerTask getTask() {
-            return new TimerTask() {
-                @Override
-                public void run() {
-                    game.sendPing();
-                    timer.schedule(getTask(), interval);
-                }
-            };
         }
     }
 }

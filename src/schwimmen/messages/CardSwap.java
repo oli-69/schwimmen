@@ -1,5 +1,7 @@
 package schwimmen.messages;
 
+import cardgame.messages.Card;
+
 public class CardSwap {
 
     public Card cardGiven;

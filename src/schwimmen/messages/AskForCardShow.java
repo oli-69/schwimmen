@@ -1,6 +1,6 @@
 package schwimmen.messages;
 
-import schwimmen.SchwimmenPlayer;
+import cardgame.Player;
 
 public class AskForCardShow {
 
@@ -9,7 +9,7 @@ public class AskForCardShow {
     public String source;
     public int hashCode;
 
-    public AskForCardShow(SchwimmenPlayer source) {
+    public AskForCardShow(Player source) {
         this.source = source.getName();
         this.hashCode = super.hashCode();
     }

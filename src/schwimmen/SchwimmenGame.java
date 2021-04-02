@@ -2,36 +2,35 @@ package schwimmen;
 
 import cardgame.Card;
 import cardgame.CardGame;
-import com.google.gson.Gson;
+import cardgame.Player;
+import cardgame.SocketMessage;
+import cardgame.messages.PlayerStack;
+import cardgame.messages.WebradioUrl;
 import com.google.gson.JsonElement;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
+import java.awt.Image;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.swing.ImageIcon;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import schwimmen.messages.AskForCardShow;
 import schwimmen.messages.AskForCardView;
 import schwimmen.messages.CardSwap;
-import schwimmen.messages.ChatMessage;
 import schwimmen.messages.DiscoverMessage;
 import schwimmen.messages.DiscoverStack;
 import schwimmen.messages.Finish31OnDealMessage;
 import schwimmen.messages.GameStateMessage;
 import schwimmen.messages.PlayerMove;
-import schwimmen.messages.PlayerStack;
 import schwimmen.messages.StackSwap;
 import schwimmen.messages.ViewerStack;
 import schwimmen.messages.ViewerStackList;
-import schwimmen.messages.WebradioUrl;
 
 /**
  * This class implements the game rules and evaluates the player's decisions.
@@ -39,6 +38,8 @@ import schwimmen.messages.WebradioUrl;
 public class SchwimmenGame extends CardGame {
 
     private static final Logger LOGGER = LogManager.getLogger(SchwimmenGame.class);
+    private static final String GAME_NAME = "Schwimmen Server";
+    private static final Image GAME_ICON = new ImageIcon(SchwimmenGame.class.getResource("favicon-32x32.png")).getImage();
 
     /**
      * Enumeration of optional game rules
@@ -131,45 +132,30 @@ public class SchwimmenGame extends CardGame {
         changeStack
     };
 
-    public static final String PROP_GAMEPHASE = "gameState";
-    public static final String PROP_ATTENDEESLIST = "attendeesList";
-    public static final String PROP_PLAYERLIST = "playerList";
-    public static final String PROP_PLAYER_ONLINE = "playerOnline";
     public static final String PROP_VIEWER_MAP = "viewerMap";
-    public static final String PROP_WEBRADIO_PLAYING = "webradioPlaying";
-    public static final String PROP_WEBRADIO_URL = "webradioUrl";
     public static final String PROP_GAMERULE = "gameRule";
 
-    private final PlayerIdComparator playerIdComparator;
-    private final List<SchwimmenPlayer> players; // List of all players in the room
-    private final List<SchwimmenPlayer> attendees; // sub-list of players, which are actually in the game (alive).
-    private final List<SchwimmenPlayer> gameLeavers; // sub-list of attendees, which are already out (death)
-    private final Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> viewerMap;
+    private final List<Player> gameLeavers; // sub-list of attendees, which are already out (death)
+    private final Map<Player, Collection<Player>> viewerMap;
     private final Map<Integer, AskForCardView> askForViewMap;
     private final Map<Integer, AskForCardShow> askForShowMap;
-    private final PropertyChangeListener playerListener;
     private final List<Card> gameStack; // Stock in the middle of the game, visible to all players.
     private final List<Card> dealerStack; // 2nd stack while dealing cards.
     private final GameStackProperties gameStackProperties;
-    private final Gson gson;
     private final Round round;
     private final List<Integer> finishSoundIds;
-    private final String videoRoomName;
     private final Set<GAMERULE> gameRules;
     private final CardDealService cardDealService;
-    private final List<WebradioUrl> webradioList;
 
     private GAMEPHASE gamePhase = GAMEPHASE.waitForAttendees;
     private int[] allAttendees; // IDs of players at start of the game (alive + death).
-    private SchwimmenPlayer gameLooser = null;
-    private SchwimmenPlayer mover = null; // this is like the cursor or pointer of the player which has to move. 
+    private Player gameLooser = null;
     private PlayerMove playerMove = null;
     private DiscoverMessage discoverMessage = null;
     private Finish31OnDealMessage finish31OnDealMessage = null;
-    private boolean webradioPlaying = true;
-    private WebradioUrl radioUrl = null;
     private int finishSoundIdCursor = 0;
     private int finishSoundId = 0;
+    private int gameCounter = 0;
 
     /**
      * Default Constructor. Creates an instance of this class.
@@ -194,10 +180,7 @@ public class SchwimmenGame extends CardGame {
      * Package protected constructor. Required for unit testing.
      */
     SchwimmenGame(List<Card> gameStack, List<Card> dealerStack, String conferenceName, CardDealService cardDealService, List<WebradioUrl> webradioList) {
-        super(CARDS_32);
-        players = Collections.synchronizedList(new ArrayList<>());
-        playerIdComparator = new PlayerIdComparator(players);
-        attendees = Collections.synchronizedList(new ArrayList<>());
+        super(CARDS_32, conferenceName, webradioList);
         allAttendees = new int[0];
         gameLeavers = Collections.synchronizedList(new ArrayList<>());
         viewerMap = Collections.synchronizedMap(new HashMap<>());
@@ -207,17 +190,10 @@ public class SchwimmenGame extends CardGame {
         this.dealerStack = dealerStack;
         gameStackProperties = new GameStackProperties(gameStack);
         gameRules = new HashSet<>();
-        playerListener = this::playerPropertyChanged;
         round = new Round(this);
-        gson = new Gson();
         finishSoundIds = new ArrayList<>();
         initFinishSoundIds();
-        videoRoomName = conferenceName;
         this.cardDealService = cardDealService;
-        this.webradioList = webradioList;
-        if (!webradioList.isEmpty()) {
-            radioUrl = webradioList.iterator().next();
-        }
         super.addPropertyChangeListener(new GameChangeListener(this));
     }
 
@@ -254,63 +230,13 @@ public class SchwimmenGame extends CardGame {
     }
 
     /**
-     * Getter for property webradio url.
-     *
-     * @return the currently selected webradio url.
-     */
-    public WebradioUrl getRadioUrl() {
-        if (radioUrl == null) {
-            // fallback url
-            radioUrl = new WebradioUrl("Radio Seefunk", "https://onlineradiobox.com/json/de/radioseefunk/play?platform=web");
-        }
-        return radioUrl;
-    }
-
-    /**
-     * Setter for property webradio url
-     *
-     * @param url new value for webradio url.
-     */
-    public void setRadioUrl(WebradioUrl url) {
-        WebradioUrl oldValue = this.radioUrl;
-        this.radioUrl = url;
-        firePropertyChange(PROP_WEBRADIO_URL, oldValue, this.radioUrl);
-    }
-
-    /**
-     * Getter for property radio list.
-     *
-     * @return a list with the known webradios.
-     */
-    public List<WebradioUrl> getRadioList() {
-        return webradioList;
-    }
-
-    /**
-     * Lookup for a player by name.
-     *
-     * @param name the player's name.
-     * @return the player specified by name, null if there isn't one.f
-     */
-    public SchwimmenPlayer getPlayer(String name) {
-        return players.stream().filter(player -> player.getName().equalsIgnoreCase(name)).findAny().orElse(null);
-    }
-
-    /**
      * The Login function. A player logged in and therefore "entered the room".
      *
      * @param player the player causing the event.
      */
-    public void addPlayerToRoom(SchwimmenPlayer player) {
-        if (mover == null) {
-            mover = player;
-        }
-        player.addPropertyChangeListener(playerListener);
-        players.add(player);
-        firePropertyChange(PROP_PLAYERLIST, null, players);
-        String msg = player.getName() + " ist dazugekommen";
-        chat(msg);
-        LOGGER.info(msg);
+    @Override
+    public void addPlayerToRoom(Player player) {
+        super.addPlayerToRoom(player);
         if (gamePhase == GAMEPHASE.waitForAttendees) {
             addAttendee(player);
         }
@@ -322,93 +248,16 @@ public class SchwimmenGame extends CardGame {
      *
      * @param player the player causing the event.
      */
-    public void removePlayerFromRoom(SchwimmenPlayer player) {
+    @Override
+    public void removePlayerFromRoom(Player player) {
         if (gamePhase != GAMEPHASE.waitForAttendees) {
             LOGGER.warn("Spieler kann jetzt nicht abgemeldet werden. Spiel laeuft!");
             return;
         }
-        if (isAttendee(player)) {
-            removeAttendee(player);
-        }
         if (player.equals(gameLooser)) {
             gameLooser = null;
         }
-        player.removePropertyChangeListener(playerListener);
-        players.remove(player);
-        firePropertyChange(PROP_PLAYERLIST, null, players);
-        String msg = "Spieler " + player.getName() + " ist gegangen";
-        chat(msg);
-        LOGGER.info(msg);
-    }
-
-    /**
-     * Getter for property videoRoomName.
-     *
-     * @return the name for the room in Jitsi meet.
-     */
-    public String getVideoRoomName() {
-        return videoRoomName;
-    }
-
-    /**
-     * Lookup for property isAttendee.
-     *
-     * @param player the player for which it is asked for.
-     * @return true if the player is currently attendee of the game, false
-     * otherwise.
-     */
-    public boolean isAttendee(SchwimmenPlayer player) {
-        return attendees.contains(player);
-    }
-
-    /**
-     * Getter for property player list.
-     *
-     * @return the list of players in the room.
-     */
-    public List<SchwimmenPlayer> getPlayerList() {
-        return Collections.unmodifiableList(players);
-    }
-
-    /**
-     * Sends a ping to all clients. Required to prevent the websocket timeout in
-     * case of no action.
-     */
-    public void sendPing() {
-        sendToPlayers("{\"action\":\"ping\"}");
-    }
-
-    /**
-     * Sends a message to all players.
-     *
-     * @param message the message in JSON format.
-     */
-    public void sendToPlayers(String message) {
-        players.forEach(p -> {
-            p.getSocket().sendString(message);
-        });
-    }
-
-    /**
-     * Sends a chat message to all clients.
-     *
-     * @param text the text to be send to the chat.
-     */
-    public void chat(String text) {
-        chat(text, null);
-    }
-
-    /**
-     * Sends a chat message to all clients.
-     *
-     * @param text the text to be send to the chat.
-     * @param sender the sending player.
-     */
-    public void chat(String text, SchwimmenPlayer sender) {
-        if (text != null && !text.trim().isEmpty()) {
-            ChatMessage chatMessage = new ChatMessage(text, sender);
-            sendToPlayers(gson.toJson(chatMessage));
-        }
+        super.removePlayerFromRoom(player);
     }
 
     /**
@@ -416,13 +265,13 @@ public class SchwimmenGame extends CardGame {
      *
      * @param player the player for which it is asked for. Will vary e.g. if the
      * player is allowed to knock etc.
-     * @return the game state for this player.
+     * @return the game state for this player in JSON format
      */
-    public GameStateMessage getGameState(SchwimmenPlayer player) {
+    private GameStateMessage getGameStateMessage(Player player) {
         List<DiscoverStack> discoverStacks = null;
         if (gamePhase == GAMEPHASE.discover) {
             discoverStacks = new ArrayList<>();
-            for (SchwimmenPlayer attendee : attendees) {
+            for (Player attendee : attendees) {
                 if (attendee.equals(round.finisher)) {
                     discoverStacks.add(new DiscoverStack(round.finisher, round.finishScore));
                 } else {
@@ -433,7 +282,19 @@ public class SchwimmenGame extends CardGame {
         Finish31OnDealMessage finish31OnDeal = (gamePhase == GAMEPHASE.finish31OnDeal) ? finish31OnDealMessage : null;
         return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
                 gameStackProperties.getGameStack(), player.getStack(), getViewerStackList(player), isChangeStackAllowed(player),
-                isKnockAllowed(), isPassAllowed(player), discoverStacks, finish31OnDeal, webradioPlaying, getRadioUrl());
+                isKnockAllowed(), isPassAllowed(player), discoverStacks, finish31OnDeal, isWebradioPlaying(), getRadioUrl());
+    }
+
+    /**
+     * Getter for property game state.
+     *
+     * @param player the player for which it is asked for. Will vary e.g. if the
+     * player is allowed to knock etc.
+     * @return the game state for this player in JSON format
+     */
+    @Override
+    public String getGameState(Player player) {
+        return gson.toJson(getGameStateMessage(player));
     }
 
     /**
@@ -444,15 +305,6 @@ public class SchwimmenGame extends CardGame {
      */
     public int[] getAllAttendees() {
         return allAttendees;
-    }
-
-    /**
-     * Getter for property Attendees count.
-     *
-     * @return the number of attendees (still) in the game.
-     */
-    public int getAttendeesCount() {
-        return attendees.size();
     }
 
     /**
@@ -469,7 +321,7 @@ public class SchwimmenGame extends CardGame {
      *
      * @return the map of card viewers for all players.
      */
-    public Map<SchwimmenPlayer, Collection<SchwimmenPlayer>> getViewerMap() {
+    public Map<Player, Collection<Player>> getViewerMap() {
         return viewerMap;
     }
 
@@ -479,12 +331,12 @@ public class SchwimmenGame extends CardGame {
      * @param player the viewing player.
      * @return a list of card stacks, which the player is viewing.
      */
-    public ViewerStackList getViewerStackList(SchwimmenPlayer player) {
-        Iterator<SchwimmenPlayer> iterator = viewerMap.keySet().iterator();
-        List<SchwimmenPlayer> showerList = new ArrayList<>();
+    public ViewerStackList getViewerStackList(Player player) {
+        Iterator<Player> iterator = viewerMap.keySet().iterator();
+        List<Player> showerList = new ArrayList<>();
         while (iterator.hasNext()) {
-            SchwimmenPlayer shower = iterator.next();
-            Collection<SchwimmenPlayer> viewers = viewerMap.get(shower);
+            Player shower = iterator.next();
+            Collection<Player> viewers = viewerMap.get(shower);
             if (viewers != null && viewers.contains(player)) {
                 showerList.add(shower);
             }
@@ -497,16 +349,6 @@ public class SchwimmenGame extends CardGame {
             return new ViewerStackList(viewerStacks);
         }
         return new ViewerStackList();
-    }
-
-    /**
-     * Getter for property mover.
-     *
-     * @return the player which is allowed to select a move. (The game's
-     * 'cursor')
-     */
-    public SchwimmenPlayer getMover() {
-        return mover;
     }
 
     /**
@@ -543,7 +385,7 @@ public class SchwimmenGame extends CardGame {
      * @return true if the player is allowed to change the stock cards (in the
      * middle), false otherwise.
      */
-    public boolean isChangeStackAllowed(SchwimmenPlayer player) {
+    public boolean isChangeStackAllowed(Player player) {
         return round != null && round.isChangeStackAllowed(player, gameStack);
     }
 
@@ -553,7 +395,7 @@ public class SchwimmenGame extends CardGame {
      * @param player the player for which it is asked for.
      * @return true if the player is allowed to pass, false otherwise.
      */
-    public boolean isPassAllowed(SchwimmenPlayer player) {
+    public boolean isPassAllowed(Player player) {
         return round != null && round.isPassAllowed(player);
     }
 
@@ -566,58 +408,71 @@ public class SchwimmenGame extends CardGame {
         return (round != null) && round.isKnockAllowed();
     }
 
-    /**
-     * Setter for property WebRadioPlaying.
-     *
-     * @param play true to turn on the webradio, false to turn off.
-     */
-    public void setWebRadioPlaying(boolean play) {
-        boolean oldValue = webradioPlaying;
-        webradioPlaying = play;
-        firePropertyChange(PROP_WEBRADIO_PLAYING, oldValue, play);
+    @Override
+    public void shufflePlayers() {
+        if (gamePhase == GAMEPHASE.waitForAttendees) {
+            super.shufflePlayers();
+        } else {
+            LOGGER.warn("Das Umsetzen der Spieler ist im Spiel nicht erlaubt.");
+        }
     }
 
-    /**
-     * Getter for property WebradioPlaying.
-     *
-     * @return true if the webradio is currently playing, false otherwise.
-     */
-    public boolean isWebradioPlaying() {
-        return webradioPlaying;
+    @Override
+    public String getName() {
+        return GAME_NAME;
+    }
+
+    @Override
+    public Image getIcon() {
+        return GAME_ICON;
     }
 
     /**
      * Starts the game.
      */
+    @Override
     public void startGame() {
-        mover = guessNextGameStarter();
-        gameLeavers.clear();
-        viewerMap.clear();
-        askForViewMap.clear();
-        askForShowMap.clear();
-        gameLooser = null;
-        finishSoundId = getNextFinishSoundId();
-        initRound();
-        List<SchwimmenPlayer> offlineAttendees = new ArrayList<>();
-        attendees.forEach((attendee) -> {
-            attendee.reset();
-            if (!attendee.isOnline()) {
-                offlineAttendees.add(attendee);
+        if (gamePhase == GAMEPHASE.waitForAttendees) {
+            gameCounter++;
+            mover = guessNextGameStarter();
+            gameLeavers.clear();
+            viewerMap.clear();
+            askForViewMap.clear();
+            askForShowMap.clear();
+            gameLooser = null;
+            finishSoundId = getNextFinishSoundId();
+            initRound();
+            List<Player> offlineAttendees = new ArrayList<>();
+            attendees.forEach((attendee) -> {
+                attendee.reset();
+                if (!attendee.isOnline()) {
+                    offlineAttendees.add(attendee);
+                }
+            });
+            offlineAttendees.forEach(attendee -> removeAttendee(attendee));
+            if (offlineAttendees.isEmpty()) { // ensure the event is fired at least once.
+                firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
             }
-        });
-        offlineAttendees.forEach(attendee -> removeAttendee(attendee));
-        if (offlineAttendees.isEmpty()) { // ensure the event is fired at least once.
-            firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
+            firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
+            setGamePhase(GAMEPHASE.shuffle);
+            chat("Spiel #" + gameCounter + " wird gestartet");
+        } else {
+            LOGGER.warn("Das Spiel ist bereits gestartet!");
         }
-        firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
-        setGamePhase(GAMEPHASE.shuffle);
     }
 
     /**
      * Stops a game. (Serverside only, not part of the game rules)
      */
+    @Override
     public void stopGame() {
-        setGamePhase(GAMEPHASE.waitForAttendees);
+        if (gamePhase != GAMEPHASE.waitForAttendees) {
+            mover = guessNextGameStarter();
+            setGamePhase(GAMEPHASE.waitForAttendees);
+            chat("Spiel #" + gameCounter + " wurde abgebrochen");
+        } else {
+            LOGGER.warn("Das Spiel ist bereits gestoppt!");
+        }
     }
 
     /**
@@ -625,17 +480,16 @@ public class SchwimmenGame extends CardGame {
      *
      * @param attendee player to add to the attendees.
      */
-    public void addAttendee(SchwimmenPlayer attendee) {
+    @Override
+    public void addAttendee(Player attendee) {
         if (gamePhase == GAMEPHASE.waitForAttendees) {
             if (!attendees.contains(attendee)) {
                 if (players.contains(attendee)) {
                     attendees.add(attendee);
                     Collections.sort(attendees, playerIdComparator);
-                    if (gamePhase == GAMEPHASE.waitForAttendees) {
-                        allAttendees = new int[attendees.size()];
-                        for (int i = 0; i < allAttendees.length; i++) {
-                            allAttendees[i] = players.indexOf(attendees.get(i));
-                        }
+                    allAttendees = new int[attendees.size()];
+                    for (int i = 0; i < allAttendees.length; i++) {
+                        allAttendees[i] = players.indexOf(attendees.get(i));
                     }
                     firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
                     LOGGER.debug("Player '" + attendee + "' added to attendees list");
@@ -653,7 +507,8 @@ public class SchwimmenGame extends CardGame {
      *
      * @param attendee the player to remove from the attendees.
      */
-    public void removeAttendee(SchwimmenPlayer attendee) {
+    @Override
+    public void removeAttendee(Player attendee) {
         if (gamePhase != GAMEPHASE.waitForAttendees) {
             if (attendees.contains(attendee) && !round.leavers.contains(attendee)) {
                 round.leavers.add(attendee);
@@ -677,25 +532,12 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void playerPropertyChanged(PropertyChangeEvent evt) {
-        switch (evt.getPropertyName()) {
-            case SchwimmenPlayer.PROP_LOGOUT:
-                SchwimmenPlayer player = (SchwimmenPlayer) evt.getSource();
-                removePlayerFromRoom(player);
-                break;
-            case SchwimmenPlayer.PROP_ONLINE:
-                firePropertyChange(PROP_PLAYER_ONLINE, null, evt.getSource());
-                break;
-            case SchwimmenPlayer.PROP_SOCKETMESSAGE:
-                processMessage((SchwimmenPlayer) evt.getSource(), (SocketMessage) evt.getNewValue());
-                break;
-        }
-    }
 
     /*
     /* Messages from the players 
      */
-    private void processMessage(SchwimmenPlayer player, SocketMessage message) {
+    @Override
+    protected void processMessage(Player player, SocketMessage message) {
         switch (message.action) {
             case "addToAttendees":
                 addAttendee(player);
@@ -813,15 +655,15 @@ public class SchwimmenGame extends CardGame {
     private void discover() {
         mover = getNextTo(round.dealer);
         List<DiscoverStack> playerStacks = new ArrayList<>();
-        for (SchwimmenPlayer attendee : attendees) {
+        for (Player attendee : attendees) {
             if (attendee.equals(round.finisher)) {
                 playerStacks.add(new DiscoverStack(round.finisher, round.finishScore));
             } else {
                 playerStacks.add(new DiscoverStack(attendee, getStackScore(attendee.getStack())));
             }
         }
-        List<SchwimmenPlayer> payers = findRoundPayers();
-        List<SchwimmenPlayer> leavers = findRoundLeavers(payers);
+        List<Player> payers = findRoundPayers();
+        List<Player> leavers = findRoundLeavers(payers);
         round.leavers = leavers;
         while (leavers != null && leavers.contains(mover)) { //  regular next mover has left -> step forward
             mover = getNextTo(mover);
@@ -831,8 +673,8 @@ public class SchwimmenGame extends CardGame {
         setGamePhase(GAMEPHASE.discover);
     }
 
-    private List<SchwimmenPlayer> findRoundPayers() {
-        final ArrayList<SchwimmenPlayer> payers = new ArrayList<>();
+    private List<Player> findRoundPayers() {
+        final ArrayList<Player> payers = new ArrayList<>();
 
         if (round.finishScore == 33f) { // fire
             payers.addAll(attendees);
@@ -842,8 +684,8 @@ public class SchwimmenGame extends CardGame {
 
         float minScore = Float.MAX_VALUE;
         float playerScore;
-        final ArrayList<SchwimmenPlayer> loosers = new ArrayList<>();
-        for (SchwimmenPlayer attendee : attendees) {
+        final ArrayList<Player> loosers = new ArrayList<>();
+        for (Player attendee : attendees) {
             if (!attendee.equals(round.finisher)) {
                 playerScore = getStackScore(attendee.getStack());
                 if (playerScore < minScore) {
@@ -858,7 +700,7 @@ public class SchwimmenGame extends CardGame {
 
         if (isGameRuleEnabled(GAMERULE.Knocking)) {
             int maxPrio = -1;
-            for (SchwimmenPlayer looser : loosers) {
+            for (Player looser : loosers) {
                 int knockPrio = round.getKnockPriority(looser);
                 if (knockPrio > maxPrio) {
                     payers.clear();
@@ -880,7 +722,7 @@ public class SchwimmenGame extends CardGame {
                 // do not return payers
                 int sumLooserGameToken = 0;
 
-                for (SchwimmenPlayer looser : loosers) {
+                for (Player looser : loosers) {
                     // sum over all looser game token
                     sumLooserGameToken += looser.getGameTokens();
                 }
@@ -892,17 +734,17 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private List<SchwimmenPlayer> findRoundLeavers(List<SchwimmenPlayer> payers) {
-        ArrayList<SchwimmenPlayer> leavers = new ArrayList<>();
+    private List<Player> findRoundLeavers(List<Player> payers) {
+        ArrayList<Player> leavers = new ArrayList<>();
         payers.forEach(payer -> {
-            if (payer.decreaseToken() < 0) {
+            if (payer.decreaseGameToken() < 0) {
                 leavers.add(payer);
             }
         });
         return leavers;
     }
 
-    private void processNextRound(SchwimmenPlayer player) {
+    private void processNextRound(Player player) {
         if (player.equals(mover)) {
             if (null != gamePhase) {
                 switch (gamePhase) {
@@ -912,7 +754,7 @@ public class SchwimmenGame extends CardGame {
                                 gameLooser = leaver; // dealer for the next game
                             }
                             gameLeavers.add(leaver);
-                            Collection<SchwimmenPlayer> viewerList = viewerMap.get(leaver);
+                            Collection<Player> viewerList = viewerMap.get(leaver);
                             if (viewerList != null) {
                                 viewerList.clear();
                             }
@@ -921,8 +763,8 @@ public class SchwimmenGame extends CardGame {
 
                         });
                         if (attendees.size() == 1) { // game over
-                            SchwimmenPlayer winner = attendees.get(0);
-                            Collection<SchwimmenPlayer> viewerList = viewerMap.get(winner);
+                            Player winner = attendees.get(0);
+                            Collection<Player> viewerList = viewerMap.get(winner);
                             if (viewerList != null) {
                                 viewerList.clear();
                             }
@@ -938,13 +780,14 @@ public class SchwimmenGame extends CardGame {
                             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
                             players.forEach(p -> p.reset());
                             players.forEach(p -> p.getSocket().sendString(gson.toJson(
-                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), webradioPlaying, getRadioUrl()))));
+                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), isWebradioPlaying(), getRadioUrl()))));
                             setGamePhase(GAMEPHASE.waitForAttendees);
+                            chat(winner.getName() + " hat gewonnen");
                         } else {
                             players.forEach(p -> {
                                 p.getStack().clear();
                                 p.getSocket().sendString(gson.toJson(
-                                        new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), webradioPlaying, getRadioUrl())));
+                                        new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), isWebradioPlaying(), getRadioUrl())));
                             }
                             );
                             setGamePhase(GAMEPHASE.shuffle);
@@ -965,8 +808,8 @@ public class SchwimmenGame extends CardGame {
     }
 
     /* Round and Game has finished. Now look for the Player which must start the next Game. */
-    private SchwimmenPlayer guessNextGameStarter() {
-        SchwimmenPlayer nextMover = (gameLooser != null && attendees.contains(gameLooser)) ? gameLooser : getNextTo(gameLooser);
+    private Player guessNextGameStarter() {
+        Player nextMover = (gameLooser != null && attendees.contains(gameLooser)) ? gameLooser : getNextTo(gameLooser);
         if (nextMover == null || !nextMover.isOnline()) {
             // look for the next attendee
             if (!attendees.isEmpty()) {
@@ -993,7 +836,7 @@ public class SchwimmenGame extends CardGame {
         return nextMover;
     }
 
-    private void processStartGame(SchwimmenPlayer player) {
+    private void processStartGame(Player player) {
         if (gamePhase == GAMEPHASE.waitForAttendees) {
             if (attendees.contains(player)) {
 //                if (player.equals(mover) || mover == null) {
@@ -1006,7 +849,7 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void processDealCards(SchwimmenPlayer player) {
+    private void processDealCards(Player player) {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.shuffle) {
                 initRound();
@@ -1026,7 +869,7 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void processSelectStack(SchwimmenPlayer player, String action) {
+    private void processSelectStack(Player player, String action) {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.dealCards || gamePhase == GAMEPHASE.finish31OnDeal) {
                 switch (action) {
@@ -1055,7 +898,7 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void processSwapCard(SchwimmenPlayer player, SocketMessage message) {
+    private void processSwapCard(Player player, SocketMessage message) {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.waitForPlayerMove) {
                 List<Card> playerStack = player.getStack();
@@ -1081,7 +924,7 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void processSwapAllCards(SchwimmenPlayer player) {
+    private void processSwapAllCards(Player player) {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.waitForPlayerMove) {
                 List<Card> playerStack = player.getStack();
@@ -1105,7 +948,7 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void processPass(SchwimmenPlayer player) {
+    private void processPass(Player player) {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.waitForPlayerMove) {
                 if (isPassAllowed(player)) {
@@ -1123,7 +966,7 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void processKnock(SchwimmenPlayer player) {
+    private void processKnock(Player player) {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.waitForPlayerMove) {
                 if (isKnockAllowed()) {
@@ -1141,7 +984,7 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void processChangeStack(SchwimmenPlayer player) {
+    private void processChangeStack(Player player) {
         if (player.equals(mover)) {
             if (gamePhase == GAMEPHASE.waitForPlayerMove) {
                 if (isChangeStackAllowed(player)) {
@@ -1167,7 +1010,7 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void processAskForCardViewResponse(SchwimmenPlayer player, SocketMessage message) {
+    private void processAskForCardViewResponse(Player player, SocketMessage message) {
         AskForCardView question = null;
         JsonElement hashCodeElement = message.jsonObject.get("hashCode");
         if (hashCodeElement != null) {
@@ -1184,27 +1027,27 @@ public class SchwimmenGame extends CardGame {
             return;
         }
         if (valueElement.getAsBoolean() && attendees.contains(player)) {
-            Collection<SchwimmenPlayer> viewerList = viewerMap.get(player);
+            Collection<Player> viewerList = viewerMap.get(player);
             if (viewerList == null) {
                 viewerList = new HashSet<>();
                 viewerMap.put(player, viewerList);
             }
-            SchwimmenPlayer viewer = getPlayer(question.source);
+            Player viewer = getPlayer(question.source);
             viewerList.add(viewer);
             firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
-            viewer.getSocket().sendString(gson.toJson(getGameState(viewer)));
+            viewer.getSocket().sendString(getGameState(viewer));
             chat(question.source + " schaut bei " + player.getName() + " in die Karten.");
         } else {
             chat(player.getName() + " l&auml;sst " + question.source + " nicht in die Karten schauen.");
         }
     }
 
-    private void processAskForCardView(SchwimmenPlayer player, String target) {
+    private void processAskForCardView(Player player, String target) {
         if (attendees.contains(player)) {
             LOGGER.warn("Player '" + player.getName() + "' is in game and therefore not allowed to view other cards!");
             return;
         }
-        SchwimmenPlayer targetPlayer = getPlayer(target);
+        Player targetPlayer = getPlayer(target);
         if (targetPlayer == null) {
             LOGGER.warn("Player '" + target + "' doesn't exist!");
             return;
@@ -1217,7 +1060,7 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Player '" + target + "' is not in game!");
             return;
         }
-        Collection<SchwimmenPlayer> viewerList = viewerMap.get(targetPlayer);
+        Collection<Player> viewerList = viewerMap.get(targetPlayer);
         if (viewerList != null && viewerList.contains(player)) {
             LOGGER.warn("Player '" + player.getName() + "' is already viewer of " + target + "!");
             return;
@@ -1227,7 +1070,7 @@ public class SchwimmenGame extends CardGame {
         targetPlayer.getSocket().sendString(gson.toJson(askForCardView));
     }
 
-    private void processAskForCardShowResponse(SchwimmenPlayer player, SocketMessage message) {
+    private void processAskForCardShowResponse(Player player, SocketMessage message) {
         AskForCardShow question = null;
         JsonElement hashCodeElement = message.jsonObject.get("hashCode");
         if (hashCodeElement != null) {
@@ -1244,16 +1087,16 @@ public class SchwimmenGame extends CardGame {
             return;
         }
         if (valueElement.getAsBoolean()) {
-            SchwimmenPlayer askingPlayer = getPlayer(question.source);
+            Player askingPlayer = getPlayer(question.source);
             if (attendees.contains(askingPlayer)) {
-                Collection<SchwimmenPlayer> viewerList = viewerMap.get(askingPlayer);
+                Collection<Player> viewerList = viewerMap.get(askingPlayer);
                 if (viewerList == null) {
                     viewerList = new HashSet<>();
                     viewerMap.put(askingPlayer, viewerList);
                 }
                 viewerList.add(player);
                 firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
-                player.getSocket().sendString(gson.toJson(getGameState(player)));
+                player.getSocket().sendString(getGameState(player));
                 chat(askingPlayer.getName() + " zeigt " + player.getName() + " die Karten.");
             }
         } else {
@@ -1261,12 +1104,12 @@ public class SchwimmenGame extends CardGame {
         }
     }
 
-    private void processAskForCardShow(SchwimmenPlayer player, String target) {
+    private void processAskForCardShow(Player player, String target) {
         if (!attendees.contains(player)) {
             LOGGER.warn("Player '" + player.getName() + "' is not in game and therefore can't show cards!");
             return;
         }
-        SchwimmenPlayer targetPlayer = getPlayer(target);
+        Player targetPlayer = getPlayer(target);
         if (targetPlayer == null) {
             LOGGER.warn("Player '" + target + "' doesn't exist!");
             return;
@@ -1279,7 +1122,7 @@ public class SchwimmenGame extends CardGame {
             LOGGER.warn("Player '" + target + "' is in game!");
             return;
         }
-        Collection<SchwimmenPlayer> viewerList = viewerMap.get(player);
+        Collection<Player> viewerList = viewerMap.get(player);
         if (viewerList != null && viewerList.contains(targetPlayer)) {
             LOGGER.warn("Player '" + target + "' is already viewer of " + player.getName() + "!");
             return;
@@ -1289,40 +1132,40 @@ public class SchwimmenGame extends CardGame {
         targetPlayer.getSocket().sendString(gson.toJson(askForCardShow));
     }
 
-    private void processStopCardViewing(SchwimmenPlayer player, SocketMessage message) {
+    private void processStopCardViewing(Player player, SocketMessage message) {
         String targetName = message.jsonObject.get("target").getAsString();
-        SchwimmenPlayer targetPlayer = getPlayer(targetName);
+        Player targetPlayer = getPlayer(targetName);
         if (targetPlayer == null) {
             LOGGER.warn("Player '" + targetName + "' doesn't exist!");
             return;
         }
-        Collection<SchwimmenPlayer> viewerList = viewerMap.get(targetPlayer);
+        Collection<Player> viewerList = viewerMap.get(targetPlayer);
         if (viewerList == null || !viewerList.contains(player)) {
             LOGGER.warn("Player '" + player.getName() + "' is not viewer of player '" + targetName + "'!");
             return;
         }
         viewerList.remove(player);
         firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
-        player.getSocket().sendString(gson.toJson(getGameState(player)));
+        player.getSocket().sendString(getGameState(player));
         chat(player.getName() + " schaut nicht mehr bei " + targetName + " in die Karten.");
 
     }
 
-    private void processStopCardShowing(SchwimmenPlayer player, SocketMessage message) {
+    private void processStopCardShowing(Player player, SocketMessage message) {
         String targetName = message.jsonObject.get("target").getAsString();
-        SchwimmenPlayer targetPlayer = getPlayer(targetName);
+        Player targetPlayer = getPlayer(targetName);
         if (targetPlayer == null) {
             LOGGER.warn("Player '" + targetName + "' doesn't exist!");
             return;
         }
-        Collection<SchwimmenPlayer> viewerList = viewerMap.get(player);
+        Collection<Player> viewerList = viewerMap.get(player);
         if (viewerList == null || !viewerList.contains(targetPlayer)) {
             LOGGER.warn("Player '" + targetName + "' is not viewer of player '" + player.getName() + "'!");
             return;
         }
         viewerList.remove(targetPlayer);
         firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
-        targetPlayer.getSocket().sendString(gson.toJson(getGameState(targetPlayer)));
+        targetPlayer.getSocket().sendString(getGameState(targetPlayer));
         chat(player.getName() + " zeigt " + targetName + " die Karten nicht mehr.");
     }
 
@@ -1386,7 +1229,7 @@ public class SchwimmenGame extends CardGame {
         return maxColorScore;
     }
 
-    boolean isFinishStack(List<Card> cards, SchwimmenPlayer player) {
+    boolean isFinishStack(List<Card> cards, Player player) {
         float score = getStackScore(cards);
         if (score > 30.5) {
             round.finisher = score > round.finishScore ? player : round.finisher;
@@ -1399,7 +1242,7 @@ public class SchwimmenGame extends CardGame {
     // search the stacks for 31 or FIRE 
     boolean isFinishStackExists() {
         boolean result = false;
-        for (SchwimmenPlayer attendee : attendees) {
+        for (Player attendee : attendees) {
             if (isFinishStack(attendee.getStack(), attendee)) {
                 result = true;
             }
@@ -1460,28 +1303,6 @@ public class SchwimmenGame extends CardGame {
     private void shiftMover() {
         mover = getNextTo(mover);
         LOGGER.debug("New mover: " + mover);
-    }
-
-    private SchwimmenPlayer getNextTo(SchwimmenPlayer player) {
-        if (attendees.isEmpty()) {
-            return null;
-        }
-        int index = attendees.indexOf(player) + 1;
-        return attendees.get(index < attendees.size() ? index : 0);
-    }
-
-    static class PlayerIdComparator implements Comparator<SchwimmenPlayer> {
-
-        final List<SchwimmenPlayer> playerList;
-
-        public PlayerIdComparator(List<SchwimmenPlayer> playerList) {
-            this.playerList = playerList;
-        }
-
-        @Override
-        public int compare(SchwimmenPlayer p1, SchwimmenPlayer p2) {
-            return playerList.indexOf(p1) < playerList.indexOf(p2) ? -1 : 1;
-        }
     }
 
     interface CardDealService {

@@ -1,6 +1,10 @@
 package schwimmen;
 
 import cardgame.Card;
+import cardgame.Player;
+import cardgame.PlayerIdComparator;
+import cardgame.messages.ChatMessage;
+import cardgame.messages.LoginSuccess;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,11 +30,9 @@ import schwimmen.SchwimmenGame.GAMERULE;
 import schwimmen.SchwimmenGame.MOVE;
 import schwimmen.messages.AskForCardShow;
 import schwimmen.messages.AskForCardView;
-import schwimmen.messages.ChatMessage;
 import schwimmen.messages.DiscoverMessage;
 import schwimmen.messages.DiscoverStack;
 import schwimmen.messages.GamePhase;
-import schwimmen.messages.LoginSuccess;
 
 /**
  * Tests for class SchwimmenGame
@@ -100,8 +102,8 @@ public class SchwimmenGameTest {
 
     @Test
     public void testPlayerComparator() {
-        List<SchwimmenPlayer> playerList = new ArrayList<>();
-        List<SchwimmenPlayer> attendeeList = new ArrayList<>();
+        List<Player> playerList = new ArrayList<>();
+        List<Player> attendeeList = new ArrayList<>();
         playerList.add(player1);
         playerList.add(player2);
         playerList.add(player3);
@@ -110,7 +112,7 @@ public class SchwimmenGameTest {
         attendeeList.add(player3);
 
         // when
-        attendeeList.sort(new SchwimmenGame.PlayerIdComparator(playerList));
+        attendeeList.sort(new PlayerIdComparator(playerList));
 
         // then
         assertEquals(player1, attendeeList.get(0));
@@ -438,15 +440,15 @@ public class SchwimmenGameTest {
         make25(player3.getStack());
         make21(gameStack);
 
-        player1.decreaseToken();
-        player1.decreaseToken();
-        player1.decreaseToken();
-        player2.decreaseToken();
-        player2.decreaseToken();
-        player2.decreaseToken();
-        player3.decreaseToken();
-        player3.decreaseToken();
-        player3.decreaseToken();
+        player1.decreaseGameToken();
+        player1.decreaseGameToken();
+        player1.decreaseGameToken();
+        player2.decreaseGameToken();
+        player2.decreaseGameToken();
+        player2.decreaseGameToken();
+        player3.decreaseGameToken();
+        player3.decreaseGameToken();
+        player3.decreaseGameToken();
 
         assertEquals(0, player1.getGameTokens());
         assertEquals(0, player2.getGameTokens());
@@ -942,7 +944,7 @@ public class SchwimmenGameTest {
         assertEquals(messageCount + 2, socket2.messageBuff.size());
         ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
         assertEquals(name2 + " zeigt " + name1 + " die Karten.", chatMessage.text);
-        Collection<SchwimmenPlayer> viewerList = game.getViewerMap().get(player2);
+        Collection<Player> viewerList = game.getViewerMap().get(player2);
         assertEquals(1, viewerList.size());
         assertEquals(player1, viewerList.iterator().next());
     }
@@ -1048,7 +1050,7 @@ public class SchwimmenGameTest {
         assertEquals(messageCount + 3, socket1.messageBuff.size());
         ChatMessage chatMessage = gson.fromJson(socket1.lastMessage(), ChatMessage.class);
         assertEquals(name1 + " schaut bei " + name2 + " in die Karten.", chatMessage.text);
-        Collection<SchwimmenPlayer> viewerList = game.getViewerMap().get(player2);
+        Collection<Player> viewerList = game.getViewerMap().get(player2);
         assertEquals(1, viewerList.size());
         assertEquals(player1, viewerList.iterator().next());
     }
@@ -1326,10 +1328,10 @@ public class SchwimmenGameTest {
         socket.onText("{\"action\": \"swapCard\", \"playerStack\": \"0\", \"gameStack\": \"0\"}");
     }
 
-    private void login(SchwimmenPlayer player) {
+    private void login(Player player) {
         game.addPlayerToRoom(player);
         player.getSocket().sendString(gson.toJson(new LoginSuccess("roomName")));
-        player.getSocket().sendString(gson.toJson(game.getGameState(player)));
+        player.getSocket().sendString(game.getGameState(player));
     }
 
     private void startWith2Players() {

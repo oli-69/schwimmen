@@ -145,6 +145,7 @@ function onGameState(message) {
         webradioStateLoaded = true;
     }
 }
+
 function onAttendeeList(message) {
     mover = (message.mover !== undefined) ? message.mover : mover;
     messageInProgress = false;
@@ -779,17 +780,16 @@ function onPlayerOnline(message) {
 
 function onChatMessage(message) {
     messageInProgress = false;
-    var text = message.text;
+    var text = "<span class='chatMsgTxt'>" + message.text + "</span>";
     if (message.sender !== undefined) {
-        text = message.sender + ": " + text;
+        text = "<span class='chatMsgSender'>" + message.sender + ": " + "</span>" + text;
     }
     var chatArea = $("#chatArea");
-    if (chatArea.val()) {
-        chatArea.append("\n");
-    }
-    chatArea.append(text);
+    chatArea.append("&gt; " + text + "<br>");
     chatArea.scrollTop(chatArea[0].scrollHeight);
-    sound.chat.play();
+    if (message.sender !== undefined) {
+        sound.chat.play();
+    }
 }
 
 function logStack(name, stack) {

@@ -3,7 +3,7 @@ package schwimmen;
 import cardgame.Card;
 import java.awt.Point;
 import java.util.List;
-import schwimmen.messages.GameStack;
+import cardgame.messages.GameStack;
 
 public class GameStackProperties {
 
