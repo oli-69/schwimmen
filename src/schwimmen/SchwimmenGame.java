@@ -1,5 +1,6 @@
 package schwimmen;
 
+import cardgame.GameStackProperties;
 import cardgame.Card;
 import cardgame.CardGame;
 import cardgame.Player;
@@ -188,7 +189,7 @@ public class SchwimmenGame extends CardGame {
         askForShowMap = Collections.synchronizedMap(new HashMap<>());
         this.gameStack = gameStack;
         this.dealerStack = dealerStack;
-        gameStackProperties = new GameStackProperties(gameStack);
+        gameStackProperties = new GameStackProperties(gameStack, 3);
         gameRules = new HashSet<>();
         round = new Round(this);
         finishSoundIds = new ArrayList<>();
