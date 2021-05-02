@@ -1,6 +1,11 @@
 var sound;
 var radioUrl = "https://onlineradiobox.com/json/de/radioseefunk/play?platform=web"; // fallback
 
+// following two lines removes (however) the audio delay on Safari (MacOS/iOS)
+// https://stackoverflow.com/questions/9811429/html5-audio-tag-on-safari-has-a-delay
+var AudioContext = window.AudioContext || window.webkitAudioContext;
+var audioCtx = new AudioContext();
+
 function SoundFiles() {
     this.chat = new Audio();
     this.online = new Audio();
