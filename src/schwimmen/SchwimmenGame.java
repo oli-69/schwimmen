@@ -1,8 +1,8 @@
 package schwimmen;
 
-import cardgame.GameStackProperties;
 import cardgame.Card;
 import cardgame.CardGame;
+import cardgame.GameStackProperties;
 import cardgame.Player;
 import cardgame.SocketMessage;
 import cardgame.messages.PlayerStack;
@@ -1037,9 +1037,9 @@ public class SchwimmenGame extends CardGame {
             viewerList.add(viewer);
             firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
             viewer.getSocket().sendString(getGameState(viewer));
-            chat(question.source + " schaut bei " + player.getName() + " in die Karten.");
+            chat(question.source + " schaut bei " + player.getName() + " in die Karten.", true);
         } else {
-            chat(player.getName() + " l&auml;sst " + question.source + " nicht in die Karten schauen.");
+            chat(player.getName() + " l&auml;sst " + question.source + " nicht in die Karten schauen.", true);
         }
     }
 
@@ -1098,10 +1098,10 @@ public class SchwimmenGame extends CardGame {
                 viewerList.add(player);
                 firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
                 player.getSocket().sendString(getGameState(player));
-                chat(askingPlayer.getName() + " zeigt " + player.getName() + " die Karten.");
+                chat(askingPlayer.getName() + " zeigt " + player.getName() + " die Karten.", true);
             }
         } else {
-            chat(player.getName() + " m&ouml;chte die Karten von " + question.source + " nicht sehen.");
+            chat(player.getName() + " m&ouml;chte die Karten von " + question.source + " nicht sehen.", true);
         }
     }
 
