@@ -787,7 +787,7 @@ function onChatMessage(message) {
     var chatArea = $("#chatArea");
     chatArea.append("&gt; " + text + "<br>");
     chatArea.scrollTop(chatArea[0].scrollHeight);
-    if (message.sender !== undefined) {
+    if (message.sender !== undefined || message.beep) {
         sound.chat.play();
     }
 }
