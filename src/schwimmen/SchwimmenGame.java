@@ -1148,7 +1148,7 @@ public class SchwimmenGame extends CardGame {
         viewerList.remove(player);
         firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
         player.getSocket().sendString(getGameState(player));
-        chat(player.getName() + " schaut nicht mehr bei " + targetName + " in die Karten.");
+        chat(player.getName() + " schaut nicht mehr bei " + targetName + " in die Karten.", true);
 
     }
 
@@ -1167,7 +1167,7 @@ public class SchwimmenGame extends CardGame {
         viewerList.remove(targetPlayer);
         firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
         targetPlayer.getSocket().sendString(getGameState(targetPlayer));
-        chat(player.getName() + " zeigt " + targetName + " die Karten nicht mehr.");
+        chat(player.getName() + " zeigt " + targetName + " die Karten nicht mehr.", true);
     }
 
     /**
