@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.ListIterator;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -1232,14 +1233,14 @@ public class SchwimmenGameTest {
 
         LOGGER.info("Start the Game");
         game.startGame();
-        GamePhase startResult = gson.fromJson(socket1.lastMessage(), GamePhase.class);
+        GamePhase startResult = gson.fromJson(socket1.getMessage("gamePhase"), GamePhase.class);
         assertEquals("gamePhase", startResult.action);
         assertEquals("shuffle", startResult.phase);
         assertEquals(name1, startResult.actor);
 
         LOGGER.info("Stop the Game");
         game.stopGame();
-        GamePhase stopResult = gson.fromJson(socket1.lastMessage(), GamePhase.class);
+        GamePhase stopResult = gson.fromJson(socket1.getMessage("gamePhase"), GamePhase.class);
         assertEquals("gamePhase", stopResult.action);
         assertEquals("waitForAttendees", stopResult.phase);
         assertEquals(player1.getName(), stopResult.actor);
@@ -1398,6 +1399,17 @@ public class SchwimmenGameTest {
 
         public boolean receivedMessage(String message) {
             return messageBuff.stream().anyMatch((msg) -> (message.equals(msg)));
+        }
+
+        public String getMessage(String action) {
+            ListIterator<String> listIterator = messageBuff.listIterator(messageBuff.size());
+            while(listIterator.hasPrevious()) {
+                String message = listIterator.previous();
+                if (message.contains("\"action\":\"" + action + "\"")) {
+                    return message;
+                }
+            }
+            return null;
         }
     }
 
