@@ -40,7 +40,7 @@ public class SchwimmenGame extends CardGame {
 
     private static final Logger LOGGER = LogManager.getLogger(SchwimmenGame.class);
     private static final String GAME_NAME = "Schwimmen Server";
-    private static final Image GAME_ICON = new ImageIcon(SchwimmenGame.class.getResource("favicon-32x32.png")).getImage();
+    private static Image GAME_ICON;
 
     /**
      * Enumeration of optional game rules
@@ -425,6 +425,9 @@ public class SchwimmenGame extends CardGame {
 
     @Override
     public Image getIcon() {
+        if (GAME_ICON == null) {
+            GAME_ICON = new ImageIcon(SchwimmenGame.class.getResource("favicon-32x32.png")).getImage();
+        }
         return GAME_ICON;
     }
 
