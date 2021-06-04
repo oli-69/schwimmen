@@ -156,7 +156,6 @@ public class SchwimmenGame extends CardGame {
     private Finish31OnDealMessage finish31OnDealMessage = null;
     private int finishSoundIdCursor = 0;
     private int finishSoundId = 0;
-    private int gameCounter = 0;
 
     /**
      * Default Constructor. Creates an instance of this class.
@@ -259,6 +258,15 @@ public class SchwimmenGame extends CardGame {
             gameLooser = null;
         }
         super.removePlayerFromRoom(player);
+    }
+
+    @Override
+    protected boolean checkGameTimeout() {
+        boolean timeout = super.checkGameTimeout();
+        if (timeout) {
+            initFinishSoundIds();
+        }
+        return timeout;
     }
 
     /**
@@ -474,8 +482,6 @@ public class SchwimmenGame extends CardGame {
             mover = guessNextGameStarter();
             setGamePhase(GAMEPHASE.waitForAttendees);
             chat("Spiel #" + gameCounter + " wurde abgebrochen");
-        } else {
-            LOGGER.warn("Das Spiel ist bereits gestoppt!");
         }
     }
 

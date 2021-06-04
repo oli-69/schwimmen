@@ -1,6 +1,7 @@
 package schwimmen;
 
 import cardgame.GameServer;
+import cardgame.ui.GameFrame;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Properties;
@@ -21,7 +22,6 @@ import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
 import org.eclipse.jetty.websocket.servlet.WebSocketCreator;
 import schwimmen.SchwimmenGame.GAMERULE;
 import schwimmen.ui.SchwimmenGamePanel;
-import cardgame.ui.GameFrame;
 
 /**
  * This class represents the SchwimmenServer. It implements the static main
@@ -96,6 +96,7 @@ public class SchwimmenServer extends GameServer {
         }, "Stop HttpServer Hook"));
         new PingWatchdog(game).start();
 
+        game.setGameTimeout(Integer.parseInt(settings.getProperty("gameTimeout", "0")));
         game.setWebRadioPlaying(Boolean.parseBoolean(settings.getProperty("webradioEnabled", "true")));
         game.setGameRuleEnabled(GAMERULE.newCardsOn789, Boolean.parseBoolean(settings.getProperty("rule789Enabled", "true")));
         game.setGameRuleEnabled(GAMERULE.passOnlyOncePerRound, Boolean.parseBoolean(settings.getProperty("rulePassOnceEnabled", "false")));
