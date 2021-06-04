@@ -255,7 +255,9 @@ function closeSocket() {
 
 
 function log(text) {
-    console.log(text);
+    if (!true) {
+        console.log(text);
+    }
 }
 
 function warn(text) {
