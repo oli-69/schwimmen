@@ -1230,6 +1230,7 @@ public class SchwimmenGameTest {
     public void testStartStopGame() {
         LOGGER.info("Login the Player");
         login(player1);
+        login(player2);
 
         LOGGER.info("Start the Game");
         game.startGame();

@@ -465,9 +465,11 @@ public class SchwimmenGame extends CardGame {
             if (offlineAttendees.isEmpty()) { // ensure the event is fired at least once.
                 firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
             }
-            firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
-            setGamePhase(GAMEPHASE.shuffle);
-            chat("Spiel #" + gameCounter + " wird gestartet");
+            if (attendees.size() > 1) {
+                firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
+                setGamePhase(GAMEPHASE.shuffle);
+                chat("Spiel #" + gameCounter + " wird gestartet");
+            }
         } else {
             LOGGER.warn("Das Spiel ist bereits gestartet!");
         }
