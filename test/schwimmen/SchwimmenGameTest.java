@@ -71,6 +71,9 @@ public class SchwimmenGameTest {
     private final String name3 = "Player 3";
     private final String name4 = "Player 4";
     private final String name5 = "Player 5";
+    private final WebradioUrl webradioUrl_1 = new WebradioUrl("radio1", "http://radio1.de");
+    private final WebradioUrl webradioUrl_2 = new WebradioUrl("radio2", "http://radio2.de");
+    private final List<WebradioUrl> radioList = new ArrayList<>();
     private final List<String> adminNames = new ArrayList<>();
     private final Gson gson = new Gson();
 
@@ -80,9 +83,11 @@ public class SchwimmenGameTest {
         dealerStack = Collections.synchronizedList(new ArrayList<>());
         dealCardStacks = Arrays.asList(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         dealCardStacks.forEach(stack -> make25(stack));
+        radioList.add(webradioUrl_1);
+        radioList.add(webradioUrl_2);
         adminNames.add(name1);
         adminNames.add(name2);
-        game = new SchwimmenGame(gameStack, dealerStack, "", new CardDealServiceImpl(), new ArrayList<>(), adminNames);
+        game = new SchwimmenGame(gameStack, dealerStack, "", new CardDealServiceImpl(), radioList, adminNames);
         session1 = Mockito.mock(Session.class);
         session2 = Mockito.mock(Session.class);
         session3 = Mockito.mock(Session.class);
@@ -103,6 +108,19 @@ public class SchwimmenGameTest {
         when(session3.isOpen()).thenReturn(Boolean.TRUE);
         when(session4.isOpen()).thenReturn(Boolean.TRUE);
         when(session5.isOpen()).thenReturn(Boolean.TRUE);
+    }
+
+    @Test
+    public void testPlayerCommandWebradio() {
+        // given
+        login(player1);
+        assertEquals( game.getRadioUrl().name, game.getRadioList().get(0).name);
+        
+        // when
+        socket1.onText("{\"action\": \"command\", \"command\": \"changeWebradio\", \"id\": \"1\"}");
+        
+        // then
+        assertEquals( game.getRadioUrl().name, game.getRadioList().get(1).name);
     }
 
     @Test

@@ -293,7 +293,7 @@ public class SchwimmenGame extends CardGame {
         Finish31OnDealMessage finish31OnDeal = (gamePhase == GAMEPHASE.finish31OnDeal) ? finish31OnDealMessage : null;
         return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, activeAdmin,
                 gameStackProperties.getGameStack(), player.getStack(), getViewerStackList(player), isChangeStackAllowed(player),
-                isKnockAllowed(), isPassAllowed(player), discoverStacks, finish31OnDeal, isWebradioPlaying(), getRadioUrl(), 
+                isKnockAllowed(), isPassAllowed(player), discoverStacks, finish31OnDeal, isWebradioPlaying(), getRadioUrl(),
                 new GameRules(this));
     }
 
@@ -1210,6 +1210,14 @@ public class SchwimmenGame extends CardGame {
                         shufflePlayers();
                     } else {
                         LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForAttendees));
+                    }
+                    break;
+                case "changeWebradio":
+                    int id = message.jsonObject.get("id").getAsInt();
+                    try {
+                        setRadioUrl(getRadioList().get(id));
+                    } catch (Exception e) {
+                        LOGGER.warn("Unable to select radio id " + id, e);
                     }
                     break;
                 case "setGameRule":
