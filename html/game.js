@@ -31,6 +31,7 @@ var askForViewerHashCode;
 var adminWindow;
 var radioList = [];
 var playerPopup;
+var gameRules;
 
 function onDocumentReady() {
     $("#loginConsole").text("Anmeldung vorbereiten...");
@@ -120,7 +121,14 @@ function onQuestionMessageBuffer() {
     }
 }
 
+function onGameRules(message) {
+    messageInProgress = false;
+    gameRules = message;
+    updateGameRules();
+}
+
 function onGameState(message) {
+    gameRules = message.gameRules;
     gamePhase = message.phase;
     players = message.playerList.players;
     attendees = message.attendeeList.attendees;
@@ -1357,13 +1365,23 @@ function updateRadioList(radioUrl) {
     }
 }
 
+function updateGameRules() {
+    $("#rule789").prop("checked", gameRules.new789);
+    $("#rulePassOnce").prop("checked", gameRules.passOnce);
+    $("#ruleKnocking").prop("checked", gameRules.knocking);
+}
+
 function updateAdminWindow() {
     var isAdmin = (myName === admin);
     var isRunning = (gamePhase != "waitForAttendees");
-    var isMinAttendees = (attendees.length > 1);
+    var isMinAttendees = (attendees != undefined && attendees.length > 1);
     $("#cfgStartGameBtn").prop("disabled", !(isAdmin && !isRunning && isMinAttendees));
     $("#cfgStopGameBtn").prop("disabled", !(isAdmin && isRunning));
     $("#cfgShufflePlayersBtn").prop("disabled", !(isAdmin && !isRunning && isMinAttendees));
+    $("#rule789").prop("disabled", !(isAdmin && !isRunning));
+    $("#rulePassOnce").prop("disabled", !(isAdmin && !isRunning));
+    $("#ruleKnocking").prop("disabled", !(isAdmin && !isRunning));
+    updateGameRules();
     $("#cfgRadioList").prop("disabled", !(isAdmin));
     if (!isAdmin) {
         $("#adminButton").hide();
@@ -1560,5 +1578,50 @@ function onCfgShufflePlayersBtn() {
     if (myName === admin) {
         var msg = {"action": "command", "command": "shufflePlayers"};
         webSocket.send(JSON.stringify(msg));
+    }
+}
+
+function onRule789Changed() {
+    if (myName === admin) {
+        var msg = {"action": "command", "command": "setGameRule", "ruleName": "newCardsOn789", "enabled": $("#rule789").prop("checked")};
+        webSocket.send(JSON.stringify(msg));
+    }
+}
+
+function onToggleRule789() {
+    if (myName === admin) {
+        var checkBox = $("#rule789");
+        checkBox.prop("checked", (checkBox.prop("checked")));
+        onRule789Changed();
+    }
+}
+
+function onRulePassOnceChanged() {
+    if (myName === admin) {
+        var msg = {"action": "command", "command": "setGameRule", "ruleName": "passOnlyOncePerRound", "enabled": $("#rulePassOnce").prop("checked")};
+        webSocket.send(JSON.stringify(msg));
+    }
+}
+
+function onToggleRulePassOnce() {
+    if (myName === admin) {
+        var checkBox = $("#rulePassOnce");
+        checkBox.prop("checked", (checkBox.prop("checked")));
+        onRulePassOnceChanged();
+    }
+}
+
+function onRuleKnockingChanged() {
+    if (myName === admin) {
+        var msg = {"action": "command", "command": "setGameRule", "ruleName": "Knocking", "enabled": $("#ruleKnocking").prop("checked")};
+        webSocket.send(JSON.stringify(msg));
+    }
+}
+
+function onToggleRuleKnocking() {
+    if (myName === admin) {
+        var checkBox = $("#ruleKnocking");
+        checkBox.prop("checked", (checkBox.prop("checked")));
+        onRuleKnockingChanged();
     }
 }

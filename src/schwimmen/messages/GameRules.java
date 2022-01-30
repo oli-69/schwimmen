@@ -4,7 +4,7 @@ import schwimmen.SchwimmenGame;
 
 public class GameRules {
 
-    public final String action = "gameRuless";
+    public final String action = "gameRules";
 
     private final boolean knocking;
     private final boolean new789;

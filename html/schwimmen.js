@@ -184,6 +184,11 @@ function onServerMessage(data) {
                 onGamePhaseMessage(message);
             });
             break;
+        case "gameRules":
+            messageBuffer.push(function () {
+                onGameRules(message);
+            });
+            break;
         case "playerStack":
             messageBuffer.push(function () {
                 onPlayerStack(message);

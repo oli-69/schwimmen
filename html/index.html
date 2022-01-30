@@ -105,10 +105,22 @@
                     <div id="adminWindowContent">
                         <div style="text-align:center"><h1>Spieleinstellungen</h1></div>
                         <table style="margin-left: auto; margin-right: auto; table-layout: fixed; border-collapse: collapse;">
-                            <tr><td><button style="width:100%;" id="cfgStartGameBtn" onclick="onCfgStartGameBtn()" disabled />Start Game</button></td></tr>
-                            <tr><td><button style="width:100%;" id="cfgStopGameBtn" onclick="onCfgStopGameBtn()" disabled />Stop Game</button></td></tr>
-                            <tr><td><button style="width:100%;" id="cfgShufflePlayersBtn" onclick="onCfgShufflePlayersBtn()" disabled />Spieler umsetzen</button></td></tr>
-                            <tr><td><select style="width:100%; margin-left:0px; margin-right:0px;" id="cfgRadioList" onchange="onCfgChangeWebRadio()">
+                            <tr><td class="defaultTableCell"><button style="width:100%; margin-bottom:0.2em;" id="cfgStartGameBtn" onclick="onCfgStartGameBtn()" disabled />Start Game</button></td></tr>
+                            <tr><td class="defaultTableCell"><button style="width:100%; margin-bottom:0.2em;" id="cfgStopGameBtn" onclick="onCfgStopGameBtn()" disabled />Stop Game</button></td></tr>
+                            <tr><td class="defaultTableCell"><button style="width:100%; margin-bottom:0.2em;" id="cfgShufflePlayersBtn" onclick="onCfgShufflePlayersBtn()" disabled />Spieler umsetzen</button></td></tr>
+                            <tr><td class="defaultTableCell">
+                                    <input type="checkbox" id="rule789" onclick="onRule789Changed()" /> 
+                                    <label id="labelRule789" for="rule789" onclick="onToggleRule789()">'789' Regel</label>
+                                </td></tr>                            
+                            <tr><td class="defaultTableCell">
+                                    <input type="checkbox" id="rulePassOnce" onclick="onRulePassOnceChanged()" /> 
+                                    <label for="rulePassOnce" onclick="onToggleRulePassOnce()">'Pass Once' Regel</label>
+                                </td></tr>                            
+                            <tr><td class="defaultTableCell">
+                                    <input type="checkbox" id="ruleKnocking" onclick="onRuleKnockingChanged()" /> 
+                                    <label for="ruleKnocking" onclick="onToggleRuleKnocking()">'Knocking' Regel</label>
+                                </td></tr>                            
+                            <tr><td class="defaultTableCell"><select style="width:100%; margin-top:0.2em; margin-left:0px; margin-right:0px;" id="cfgRadioList" onchange="onCfgChangeWebRadio()">
                                         <option value="0">Seefunk</option>
                                         <option value="1">SAW 80er</option>
                                     </select>

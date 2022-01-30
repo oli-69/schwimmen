@@ -47,14 +47,18 @@ public class SchwimmenGamePanel extends GamePanel {
         this.game.addPropertyChangeListener(this::gamePropertyChanged);
         playerList.setCellRenderer(new PlayerRenderer());
         cbWebradioPlaying.setSelected(game.isWebradioPlaying());
-        cbRule789.setSelected(game.isGameRuleEnabled(GAMERULE.newCardsOn789));
-        cbRulePassOnce.setSelected(game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound));
-        cbRuleKnocking.setSelected(game.isGameRuleEnabled(GAMERULE.Knocking));
+        initGameRules();
     }
 
     @Override
     public CardGame getGame() {
         return game;
+    }
+    
+    private void initGameRules() {
+        cbRule789.setSelected(game.isGameRuleEnabled(GAMERULE.newCardsOn789));
+        cbRulePassOnce.setSelected(game.isGameRuleEnabled(GAMERULE.passOnlyOncePerRound));
+        cbRuleKnocking.setSelected(game.isGameRuleEnabled(GAMERULE.Knocking));       
     }
 
     private ListModel<Player> getListPlayerListModel() {
@@ -89,8 +93,13 @@ public class SchwimmenGamePanel extends GamePanel {
             case CardGame.PROP_ATTENDEESLIST:
                 playerList.repaint();
                 checkAttendeesCount();
+                break;
             case CardGame.PROP_WEBRADIO_URL:
                 cbRadio.setSelectedItem(game.getRadioUrl());
+                break;
+            case SchwimmenGame.PROP_GAMERULE:
+                initGameRules();
+                break;
             default:
                 break;
         }

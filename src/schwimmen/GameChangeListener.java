@@ -10,6 +10,7 @@ import cardgame.messages.AttendeeList;
 import schwimmen.messages.GamePhase;
 import cardgame.messages.PlayerList;
 import cardgame.messages.PlayerOnline;
+import schwimmen.messages.GameRules;
 import schwimmen.messages.ViewerMap;
 
 /**
@@ -58,6 +59,9 @@ public class GameChangeListener implements PropertyChangeListener {
                 break;
             case SchwimmenGame.PROP_GAMEPHASE:
                 processGamePhase(evt);
+                break;
+            case SchwimmenGame.PROP_GAMERULE:
+                game.sendToPlayers(gson.toJson(new GameRules(game)));
                 break;
             case SchwimmenGame.PROP_VIEWER_MAP:
                 game.sendToPlayers(gson.toJson(new ViewerMap(game.getViewerMap())));

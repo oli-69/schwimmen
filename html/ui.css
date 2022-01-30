@@ -1,8 +1,12 @@
 
 /* Mobile first  */  
-body{
+body, .defaultTableCell{
     font-family: arial, helvetica, sans-serif;
     font-size: 0.8em;
+}
+
+.defaultTableCell {
+    color: white;
 }
 
 main {
@@ -413,7 +417,7 @@ h1, h2, h3 {
 
 /* Smart Phones und Tablets mit mittlerer Auflösung */
 @media all and (min-width: 50em) {
-    body {
+    body, .defaultTableCell {
         font-size: 0.9em;
     }
     #playerListPanel, #bottomPanel{
@@ -502,7 +506,7 @@ h1, h2, h3 {
 
 /* Viewports mit großer Auflösung */
 @media all and (min-width: 70em) {
-    body {
+    body, .defaultTableCell{
         font-size: 1em;
     }
 
