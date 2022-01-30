@@ -29,22 +29,23 @@ public class GameStateMessage {
     public Finish31OnDealMessage finish31OnDealMessage;
     public boolean webradioPlaying;
     public WebradioUrl radioUrl;
+    public GameRules gameRules;
 
     public GameStateMessage(String phase, List<Player> players, List<Player> attendees, int[] allAttendees,
-            Map<Player, Collection<Player>> viewerMap, Player mover, GameStack gameStack, 
-            boolean webradioPlaying, WebradioUrl radioUrl) {
-        this(phase, players, attendees, allAttendees, viewerMap, mover, gameStack,
+            Map<Player, Collection<Player>> viewerMap, Player mover, Player activeAdmin, GameStack gameStack, 
+            boolean webradioPlaying, WebradioUrl radioUrl, GameRules gameRules) {
+        this(phase, players, attendees, allAttendees, viewerMap, mover, activeAdmin, gameStack,
                 new ArrayList<>(), new ViewerStackList(), false, false, false, null, null, 
-                webradioPlaying, radioUrl);
+                webradioPlaying, radioUrl, gameRules);
     }
 
     public GameStateMessage(String phase, List<Player> players, List<Player> attendees, int[] allAttendees,
-            Map<Player, Collection<Player>> viewerMap, Player mover, GameStack gameStack,
+            Map<Player, Collection<Player>> viewerMap, Player mover, Player activeAdmin, GameStack gameStack,
             List<cardgame.Card> playerStack, ViewerStackList viewerStackList, boolean changeStackAllowed, boolean knockAllowed,
             boolean passAllowed, List<DiscoverStack> discoverStacks, Finish31OnDealMessage finish31OnDealMessage, 
-            boolean webradioPlaying, WebradioUrl radioUrl) {
+            boolean webradioPlaying, WebradioUrl radioUrl, GameRules gameRules) {
         this.phase = phase;
-        this.playerList = new PlayerList(players);
+        this.playerList = new PlayerList(players, activeAdmin);
         this.attendeeList = new AttendeeList(attendees, allAttendees, mover);
         this.viewerMap = new ViewerMap(viewerMap);
         this.gameStack = gameStack;
@@ -59,5 +60,6 @@ public class GameStateMessage {
         this.finish31OnDealMessage = finish31OnDealMessage;
         this.webradioPlaying = webradioPlaying;
         this.radioUrl = radioUrl;
+        this.gameRules = gameRules;
     }
 }

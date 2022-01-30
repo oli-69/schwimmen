@@ -5,6 +5,7 @@ import cardgame.Player;
 import cardgame.PlayerIdComparator;
 import cardgame.messages.ChatMessage;
 import cardgame.messages.LoginSuccess;
+import cardgame.messages.WebradioUrl;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,6 +71,7 @@ public class SchwimmenGameTest {
     private final String name3 = "Player 3";
     private final String name4 = "Player 4";
     private final String name5 = "Player 5";
+    private final List<String> adminNames = new ArrayList<>();
     private final Gson gson = new Gson();
 
     @Before
@@ -78,7 +80,9 @@ public class SchwimmenGameTest {
         dealerStack = Collections.synchronizedList(new ArrayList<>());
         dealCardStacks = Arrays.asList(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         dealCardStacks.forEach(stack -> make25(stack));
-        game = new SchwimmenGame(gameStack, dealerStack, "", new CardDealServiceImpl(), new ArrayList<>());
+        adminNames.add(name1);
+        adminNames.add(name2);
+        game = new SchwimmenGame(gameStack, dealerStack, "", new CardDealServiceImpl(), new ArrayList<>(), adminNames);
         session1 = Mockito.mock(Session.class);
         session2 = Mockito.mock(Session.class);
         session3 = Mockito.mock(Session.class);
@@ -99,6 +103,99 @@ public class SchwimmenGameTest {
         when(session3.isOpen()).thenReturn(Boolean.TRUE);
         when(session4.isOpen()).thenReturn(Boolean.TRUE);
         when(session5.isOpen()).thenReturn(Boolean.TRUE);
+    }
+
+    @Test
+    public void testPlayerCommandGameRule() {
+        login(player1);
+        login(player2);
+        login(player3);
+        boolean knockingEnabled = game.isGameRuleEnabled(GAMERULE.Knocking);
+
+        // start game then try to change rule
+        socket1.onText("{\"action\": \"command\", \"command\": \"start\"}");
+        socket1.onText("{\"action\": \"command\", \"command\": \"setGameRule\", \"ruleName\": \"Knocking\", \"enabled\": \"" + !knockingEnabled + "\"}");
+        assertEquals(knockingEnabled, game.isGameRuleEnabled(GAMERULE.Knocking));
+
+        socket1.onText("{\"action\": \"command\", \"command\": \"stop\"}");
+
+        // unknown rule
+        socket1.onText("{\"action\": \"command\", \"command\": \"setGameRule\", \"ruleName\": \"xyz\", \"enabled\": \"" + !knockingEnabled + "\"}");
+
+        // unknown enabled value (=false)
+        socket1.onText("{\"action\": \"command\", \"command\": \"setGameRule\", \"ruleName\": \"Knocking\", \"enabled\": \"xyz\"}");
+        assertFalse(game.isGameRuleEnabled(GAMERULE.Knocking));
+
+        // success
+        socket1.onText("{\"action\": \"command\", \"command\": \"setGameRule\", \"ruleName\": \"Knocking\", \"enabled\": \"" + !knockingEnabled + "\"}");
+        assertEquals(!knockingEnabled, game.isGameRuleEnabled(GAMERULE.Knocking));
+    }
+
+    @Test
+    public void testPlayerCommand() {
+        login(player1);
+        login(player2);
+        login(player3);
+
+        // when (P2 isn't admin)
+        socket2.onText("{\"action\": \"command\", \"command\": \"start\"}");
+        assertEquals(GAMEPHASE.waitForAttendees, game.getGamePhase());
+
+        // wrong command
+        socket1.onText("{\"action\": \"command\", \"command\": \"xyzddskfhh\"}");
+        assertEquals(GAMEPHASE.waitForAttendees, game.getGamePhase());
+
+        // start game
+        socket1.onText("{\"action\": \"command\", \"command\": \"start\"}");
+        assertEquals(GAMEPHASE.shuffle, game.getGamePhase());
+
+        // start again
+        socket1.onText("{\"action\": \"command\", \"command\": \"start\"}");
+        // -> see log
+        assertEquals(GAMEPHASE.shuffle, game.getGamePhase());
+
+        // stop game
+        socket1.onText("{\"action\": \"command\", \"command\": \"stop\"}");
+        assertEquals(GAMEPHASE.waitForAttendees, game.getGamePhase());
+
+        // stop game again
+        socket1.onText("{\"action\": \"command\", \"command\": \"stop\"}");
+        // -> see log
+        assertEquals(GAMEPHASE.waitForAttendees, game.getGamePhase());
+
+        // shuffle players
+        socket1.onText("{\"action\": \"command\", \"command\": \"shufflePlayers\"}");
+        // -> see log
+
+        // try to shuffle players in running game
+        socket1.onText("{\"action\": \"command\", \"command\": \"start\"}");
+        socket1.onText("{\"action\": \"command\", \"command\": \"shufflePlayers\"}");
+        // -> see log
+    }
+
+    @Test
+    public void testActiveAdmin() {
+        assertNull(game.getActiveAdmin());
+
+        // when / then (start game)
+        login(player1);
+        login(player2);
+        login(player3);
+        login(player4);
+        assertEquals(player1, game.getActiveAdmin());
+
+        // when (player 1 logout)
+        game.removePlayerFromRoom(player1);
+        assertEquals(player2, game.getActiveAdmin());
+
+        // when (player 1 lo in again)
+        login(player1);
+        assertEquals(player1, game.getActiveAdmin());
+
+        // when (player 1 and 2 logout)
+        game.removePlayerFromRoom(player1);
+        game.removePlayerFromRoom(player2);
+        assertNull(game.getActiveAdmin());
     }
 
     @Test
@@ -455,7 +552,7 @@ public class SchwimmenGameTest {
         assertEquals(0, player2.getGameTokens());
         assertEquals(0, player3.getGameTokens());
         // alle Spieler schwimmen
-        
+
         pass(socket3);
         DiscoverMessage message = game.getDiscoverMessage();  // spielende erreicht
 
@@ -1332,7 +1429,7 @@ public class SchwimmenGameTest {
 
     private void login(Player player) {
         game.addPlayerToRoom(player);
-        player.getSocket().sendString(gson.toJson(new LoginSuccess("roomName")));
+        player.getSocket().sendString(gson.toJson(new LoginSuccess("roomName", new ArrayList<WebradioUrl>())));
         player.getSocket().sendString(game.getGameState(player));
     }
 
@@ -1404,7 +1501,7 @@ public class SchwimmenGameTest {
 
         public String getMessage(String action) {
             ListIterator<String> listIterator = messageBuff.listIterator(messageBuff.size());
-            while(listIterator.hasPrevious()) {
+            while (listIterator.hasPrevious()) {
                 String message = listIterator.previous();
                 if (message.contains("\"action\":\"" + action + "\"")) {
                     return message;

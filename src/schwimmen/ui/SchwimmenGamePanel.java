@@ -108,7 +108,7 @@ public class SchwimmenGamePanel extends GamePanel {
     }
 
     private void checkAttendeesCount() {
-        boolean enabled = game.getAttendeesCount() > 0 && game.getGamePhase() == GAMEPHASE.waitForAttendees;
+        boolean enabled = game.getAttendeesCount() > 1 && game.getGamePhase() == GAMEPHASE.waitForAttendees;
         startGameBtn.setEnabled(enabled);
         shufflePlayerBtn.setEnabled(enabled);
     }
@@ -118,9 +118,9 @@ public class SchwimmenGamePanel extends GamePanel {
         cbRule789.setEnabled(changeRuleAllowd);
         cbRulePassOnce.setEnabled(changeRuleAllowd);
         cbRuleKnocking.setEnabled(changeRuleAllowd);
-        startGameBtn.setEnabled(phase == GAMEPHASE.waitForAttendees);
+        startGameBtn.setEnabled(phase == GAMEPHASE.waitForAttendees && game.getAttendeesCount() > 1);
         stopGameBtn.setEnabled(phase != GAMEPHASE.waitForAttendees);
-        shufflePlayerBtn.setEnabled(phase == GAMEPHASE.waitForAttendees);
+        shufflePlayerBtn.setEnabled(phase == GAMEPHASE.waitForAttendees && game.getAttendeesCount() > 1);
     }
 
     private class PlayerRenderer extends DefaultListCellRenderer {

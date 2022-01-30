@@ -234,7 +234,7 @@ main {
 }
 .playerOffline {
     color: darkgray;
-    margin-left: 0.5em;
+    margin-left: 0.1em;
     margin-right: 0.5em;
     margin-top: 0.1em;
     margin-bottom: 0.1em;
@@ -243,7 +243,7 @@ main {
 
 .playerOnline {
     color: white;
-    margin-left: 0.5em;
+    margin-left: 0.1em;
     margin-right: 0.5em;
     margin-top: 0.1em;
     margin-bottom: 0.1em;
@@ -280,6 +280,57 @@ main {
 
 .dialogButton{
     margin-top: 0.5em;
+}
+
+#adminButton{
+    background-image: url("Settings-icon24.png");
+    position: fixed;
+    top:0px;
+    left:0px;
+    width: 24px;
+    height: 24px;
+    margin:0.3em;
+}
+
+#adminButton:hover{
+    cursor: pointer;
+}
+
+#adminWindow {
+    position:fixed;
+    left: 10%;
+    right: 10%;
+    top: 10%;
+    bottom: 20%;
+    background-color: rgba(16,16,16,1);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+    border-color: lightgray;
+    display:flex;
+    flex-direction: column;
+}
+
+h1, h2, h3 {
+    color: rgb(220, 255, 0);
+}
+
+#adminWindowContent{
+    flex-grow: 1.0;
+    color: white;
+    padding: 0.5em;
+    padding-left:1em;
+    margin:0.2em;
+    padding-right:1em;
+    text-align: justify;
+    overflow-y: scroll;
+}
+
+#adminWindowBtnPanel{
+    background-color: rgba(0,0,0,1);
+    display: flex;
+    justify-content: center;
+    padding: 0.5em;
 }
 
 #gamePage{
@@ -435,6 +486,18 @@ main {
         background-color: rgba(0,0,0,0.75);
         font-size: 1.3em;
     }
+
+    #adminWindow {
+        left: 20%;
+        right: 20%;
+    }
+
+    #adminButton{
+        background-image: url("Settings-icon32.png");
+        width: 32px;
+        height: 32px;
+        margin:0.2em;
+    }
 }
 
 /* Viewports mit großer Auflösung */
@@ -490,6 +553,12 @@ main {
     #bottomPanel{
         padding: 0.6em;
     }
+
+    #adminWindow {
+        left: 25%;
+        right: 25%;
+    }
+
     #joinInOutDialog, #dealCardsDialog, #selectDealerStackDialog, #discoverDialog, #knockDialog, #passDialog, 
     #dealerStackSelectedDialog, #askForViewCardsDialog, #askForShowCardsDialog{
         font-size: 1.6em;

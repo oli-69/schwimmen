@@ -61,7 +61,7 @@ public class SchwimmenServer extends GameServer {
         LOGGER.info("using conference name '" + confName + "'");
 
 //        confName = confName  + (System.currentTimeMillis() / 1000); // currently disabled, since Jitsi's iOS-App doesn't take the room name from the url.
-        SchwimmenGame game = new SchwimmenGame(confName, getWebradioList(settings));
+        SchwimmenGame game = new SchwimmenGame(confName, getWebradioList(settings), getAdminNames(settings));
         Server httpServer = new Server(port);
 
         ServletContextHandler context = new ServletContextHandler();

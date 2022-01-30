@@ -5,6 +5,7 @@ var attendees; // list of players currently in game (still alive)
 var allAttendees; // list of players at start of a game (alive + dead)
 var viewerMap = [0][0];
 var mover;
+var admin;
 var playerStack;
 var gameStack;
 var gameStackOffsets = [];
@@ -27,6 +28,8 @@ var messageInProgress;
 var questionMessageInProgress;
 var webradioStateLoaded = false; // get webradio state only the first time 
 var askForViewerHashCode;
+var adminWindow;
+var radioList = [];
 var playerPopup;
 
 function onDocumentReady() {
@@ -38,6 +41,8 @@ function onDocumentReady() {
     gameDesk = $("#gameDesk");
     controlPanel = $("#controlPanel");
     shufflingCard = $(getSvgCard(coveredCard).getUI()).clone();
+    adminWindow = $("#adminWindow");
+    adminWindow.hide();
     setGameDialogVisible($("#joinInOutDialog"), false);
     setGameDialogVisible($("#dealCardsDialog"), false);
     setGameDialogVisible($("#selectDealerStackDialog"), false);
@@ -121,6 +126,7 @@ function onGameState(message) {
     attendees = message.attendeeList.attendees;
     allAttendees = message.attendeeList.allAttendees;
     mover = message.attendeeList.mover;
+    admin = message.playerList.admin;
     viewerMap = message.viewerMap.table;
     gameStack = message.gameStack.cards;
     gameStackOffsets = message.gameStack.offset;
@@ -140,6 +146,7 @@ function onGameState(message) {
     $("#stackSelectMessage").html(msg);
     onGamePhase(gamePhase);
     setWebRadioUrl(message.radioUrl.url);
+    updateRadioList(message.radioUrl.url);
     if (!webradioStateLoaded) {
         setWebRadioPlaying(message.webradioPlaying);
         webradioStateLoaded = true;
@@ -156,6 +163,7 @@ function onAttendeeList(message) {
     $("#removeFromAttendeesBtn").prop("disabled", (myId < 0));
     updateAttendeeList();
     initDialogButtons();
+    updateAdminWindow();
 }
 
 function onPlayerStack(message) {
@@ -262,6 +270,7 @@ function onGamePhase(phase) {
     updateCardStack($("#gameStack"), gameStack);
     updateCardStack(attendeesCardStacks[getMyAllAttendeeId()], playerStack);
     updateAttendeeDeskColor();
+    updateAdminWindow();
 
     // Control Panel
     if (meIsMoverInGame) {
@@ -760,7 +769,9 @@ function getRotationDegrees(obj) {
 function onPlayerList(message) {
     messageInProgress = false;
     players = message.players;
+    admin = message.admin;
     updatePlayerList();
+    updateAdminWindow();
 }
 
 function onPlayerOnline(message) {
@@ -770,12 +781,26 @@ function onPlayerOnline(message) {
             player.online = message.online;
         }
     });
+    admin = message.admin;
     updatePlayerList();
+    updateAdminWindow();
     if (message.online) {
         sound.online.play();
     } else {
         sound.offline.play();
     }
+}
+
+function onRadioListChanged(list) {
+    log("process onRadioListChanged");
+    radioList = list;
+    var adminRadioBox = $("#cfgRadioList");
+    var id = 0;
+    adminRadioBox.empty();
+    radioList.forEach(function (radioUrl) {
+        $("<option/>").val(id++).text(radioUrl.name).appendTo(adminRadioBox);
+    });
+    updateRadioList(radioUrl)
 }
 
 function onChatMessage(message) {
@@ -908,8 +933,10 @@ function updatePlayerList() {
     players.forEach(function (player) {
         var className = player.online ? "playerOnline" : "playerOffline";
         var tokens = (0.5 * player.totalTokens).toFixed(2);
+        var admnImg = (admin === player.name) ? "dot-blue-8.png" : "dot-empty-8.png";
         var name = $("<span class='playerPopupEnabled'>" + player.name + "</span>");
         var container = $("<div class='" + className + "'></div>");
+        container.append($("<img src='" + admnImg + "' border=0>"));
         container.append(name);
         container.append("<br>&euro; " + tokens);
         panel.append(container);
@@ -1319,6 +1346,27 @@ function updateControlPanelMessage() {
     $("#bottomPanelMessage").html(msg);
 }
 
+function updateRadioList(radioUrl) {
+    var adminRadioBox = $("#cfgRadioList");
+    adminRadioBox.removeAttr('selected');
+    for (var id = 0; id < radioList.length; id++) {
+        if (radioUrl === radioList[id].url) {
+            adminRadioBox.val(id);
+            break;
+        }
+    }
+}
+
+function updateAdminWindow() {
+    var isAdmin = (myName === admin);
+    var isRunning = (gamePhase != "waitForAttendees");
+    var isMinAttendees = (attendees.length > 1);
+    $("#cfgStartGameBtn").prop("disabled", !(isAdmin && !isRunning && isMinAttendees));
+    $("#cfgStopGameBtn").prop("disabled", !(isAdmin && isRunning));
+    $("#cfgShufflePlayersBtn").prop("disabled", !(isAdmin && !isRunning && isMinAttendees));
+    $("#cfgRadioList").prop("disabled", !(isAdmin));
+}
+
 function getNextAttendeeId(currentId) {
     var id = currentId + 1;
     return id < attendees.length ? id : 0;
@@ -1346,6 +1394,14 @@ function setGameDialogVisible(dialog, visible) {
     } else {
         dialog.slideUp(fadePanelSpeed);
     }
+}
+
+function onOpenAdminWindow() {
+    adminWindow.slideDown(500);
+}
+
+function onCloseAdminWindow() {
+    adminWindow.slideUp(500);
 }
 
 function setPlayerPopupVisible(visible) {

@@ -27,6 +27,7 @@ import schwimmen.messages.CardSwap;
 import schwimmen.messages.DiscoverMessage;
 import schwimmen.messages.DiscoverStack;
 import schwimmen.messages.Finish31OnDealMessage;
+import schwimmen.messages.GameRules;
 import schwimmen.messages.GameStateMessage;
 import schwimmen.messages.PlayerMove;
 import schwimmen.messages.StackSwap;
@@ -162,25 +163,26 @@ public class SchwimmenGame extends CardGame {
      */
     public SchwimmenGame() {
         this(Collections.synchronizedList(new ArrayList<>()), Collections.synchronizedList(new ArrayList<>()),
-                "", new CardDealServiceImpl(), new ArrayList<>());
+                "", new CardDealServiceImpl(), new ArrayList<>(), new ArrayList<String>());
     }
 
     /**
-     * Constructor. Creates an instance of this class from given Value.
+     * Constructor.Creates an instance of this class from given Value.
      *
      * @param conferenceName the room name for the jitsi conference
      * @param webradioList list of known webradios
+     * @param adminNames list of user names with admin role enabled
      */
-    public SchwimmenGame(String conferenceName, List<WebradioUrl> webradioList) {
+    public SchwimmenGame(String conferenceName, List<WebradioUrl> webradioList, List<String> adminNames) {
         this(Collections.synchronizedList(new ArrayList<>()), Collections.synchronizedList(new ArrayList<>()),
-                conferenceName, new CardDealServiceImpl(), webradioList);
+                conferenceName, new CardDealServiceImpl(), webradioList, adminNames);
     }
 
     /**
      * Package protected constructor. Required for unit testing.
      */
-    SchwimmenGame(List<Card> gameStack, List<Card> dealerStack, String conferenceName, CardDealService cardDealService, List<WebradioUrl> webradioList) {
-        super(CARDS_32, conferenceName, webradioList);
+    SchwimmenGame(List<Card> gameStack, List<Card> dealerStack, String conferenceName, CardDealService cardDealService, List<WebradioUrl> webradioList, List<String> adminNames) {
+        super(CARDS_32, conferenceName, webradioList, adminNames);
         allAttendees = new int[0];
         gameLeavers = Collections.synchronizedList(new ArrayList<>());
         viewerMap = Collections.synchronizedMap(new HashMap<>());
@@ -289,9 +291,10 @@ public class SchwimmenGame extends CardGame {
             }
         }
         Finish31OnDealMessage finish31OnDeal = (gamePhase == GAMEPHASE.finish31OnDeal) ? finish31OnDealMessage : null;
-        return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover,
+        return new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, activeAdmin,
                 gameStackProperties.getGameStack(), player.getStack(), getViewerStackList(player), isChangeStackAllowed(player),
-                isKnockAllowed(), isPassAllowed(player), discoverStacks, finish31OnDeal, isWebradioPlaying(), getRadioUrl());
+                isKnockAllowed(), isPassAllowed(player), discoverStacks, finish31OnDeal, isWebradioPlaying(), getRadioUrl(), 
+                new GameRules(this));
     }
 
     /**
@@ -605,6 +608,9 @@ public class SchwimmenGame extends CardGame {
             case "chat":
                 chat(message.jsonObject.get("text").getAsString(), player);
                 break;
+            case "command":
+                processPlayerCommand(player, message);
+                break;
             default:
                 LOGGER.warn("Unknown message from player '" + player.getName() + "': '" + message.jsonString);
         }
@@ -792,14 +798,14 @@ public class SchwimmenGame extends CardGame {
                             firePropertyChange(PROP_ATTENDEESLIST, null, attendees);
                             players.forEach(p -> p.reset());
                             players.forEach(p -> p.getSocket().sendString(gson.toJson(
-                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), isWebradioPlaying(), getRadioUrl()))));
+                                    new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, activeAdmin, gameStackProperties.getGameStack(), isWebradioPlaying(), getRadioUrl(), new GameRules(this)))));
                             setGamePhase(GAMEPHASE.waitForAttendees);
                             chat(winner.getName() + " hat gewonnen");
                         } else {
                             players.forEach(p -> {
                                 p.getStack().clear();
                                 p.getSocket().sendString(gson.toJson(
-                                        new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, gameStackProperties.getGameStack(), isWebradioPlaying(), getRadioUrl())));
+                                        new GameStateMessage(gamePhase.name(), players, attendees, allAttendees, viewerMap, mover, activeAdmin, gameStackProperties.getGameStack(), isWebradioPlaying(), getRadioUrl(), new GameRules(this))));
                             }
                             );
                             setGamePhase(GAMEPHASE.shuffle);
@@ -1179,6 +1185,54 @@ public class SchwimmenGame extends CardGame {
         firePropertyChange(PROP_VIEWER_MAP, null, viewerMap);
         targetPlayer.getSocket().sendString(getGameState(targetPlayer));
         chat(player.getName() + " zeigt " + targetName + " die Karten nicht mehr.", true);
+    }
+
+    private void processPlayerCommand(Player player, SocketMessage message) {
+        if (player.equals(activeAdmin)) {
+            String command = message.jsonObject.get("command").getAsString();
+            switch (command) {
+                case "start":
+                    if (gamePhase == SchwimmenGame.GAMEPHASE.waitForAttendees) {
+                        startGame();
+                    } else {
+                        LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForAttendees));
+                    }
+                    break;
+                case "stop":
+                    if (gamePhase != SchwimmenGame.GAMEPHASE.waitForAttendees) {
+                        stopGame();
+                    } else {
+                        LOGGER.warn(String.format("Aktion nicht erlaubt (%s == %s)", gamePhase, GAMEPHASE.waitForAttendees));
+                    }
+                    break;
+                case "shufflePlayers":
+                    if (gamePhase == SchwimmenGame.GAMEPHASE.waitForAttendees) {
+                        shufflePlayers();
+                    } else {
+                        LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForAttendees));
+                    }
+                    break;
+                case "setGameRule":
+                    if (gamePhase == SchwimmenGame.GAMEPHASE.waitForAttendees) {
+                        String ruleName = message.jsonObject.get("ruleName").getAsString();
+                        try {
+                            GAMERULE gameRule = GAMERULE.valueOf(ruleName);
+                            boolean enabled = message.jsonObject.get("enabled").getAsBoolean();
+                            setGameRuleEnabled(gameRule, enabled);
+                        } catch (IllegalArgumentException e) {
+                            LOGGER.warn("Unbekannte Spielregel: " + ruleName);
+                        }
+                    } else {
+                        LOGGER.warn(String.format("Aktion nicht erlaubt (%s != %s)", gamePhase, GAMEPHASE.waitForAttendees));
+                    }
+                    break;
+                default:
+                    LOGGER.warn("Spieler '" + player.getName() + "' " + " unbekanntes Kommando: " + command);
+                    break;
+            }
+        } else {
+            LOGGER.warn("Spieler '" + player.getName() + "' " + " ist nicht Admin!");
+        }
     }
 
     /**

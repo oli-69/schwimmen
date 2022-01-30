@@ -47,14 +47,14 @@ public class GameChangeListener implements PropertyChangeListener {
                 game.sendToPlayers(gson.toJson(new AttendeeList((List<Player>) evt.getNewValue(), game.getAllAttendees(), game.getMover())));
                 break;
             case SchwimmenGame.PROP_PLAYERLIST:
-                game.sendToPlayers(gson.toJson(new PlayerList((List<Player>) evt.getNewValue())));
+                game.sendToPlayers(gson.toJson(new PlayerList((List<Player>) evt.getNewValue(), game.getActiveAdmin())));
                 break;
             case SchwimmenGame.PROP_PLAYER_ONLINE:
                 Player player = (Player) evt.getNewValue();
                 if (player.isOnline()) {
                     player.getSocket().sendString(game.getGameState(player));
                 }
-                game.sendToPlayers(gson.toJson(new PlayerOnline(player)));
+                game.sendToPlayers(gson.toJson(new PlayerOnline(player, game.getActiveAdmin())));
                 break;
             case SchwimmenGame.PROP_GAMEPHASE:
                 processGamePhase(evt);
